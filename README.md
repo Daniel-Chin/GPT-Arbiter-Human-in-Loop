@@ -11,14 +11,15 @@
   - With cache key as the full prompt and model selection, ensuring validity.  
 - Terminal ascii GUI (with `textual`):  
   - Displays in realtime the histogram of decisions+confidence.
-  - Displays in realtime the database coverage, using different symbols to represent "unvisited", "visited with latest prompt", "visited with stale (-2) prompt", etc.
+  - Displays in realtime the database coverage, using different symbols to represent "unvisited", "visited with latest prompt", "visited with stale (-3) prompt", etc.
   - Displays the running cost in USD.  
   - Accepts user commands to:
     - label the current query.
-      - Optionally interrogate the model for its rationale.
+      - Optionally interrogate the model for its rationales (2-way).
       - Optionally explain the reason.  
     - Set throttling.
     - Pause/resume background classification.
+  - Preview prompts from the perspective of ChatGPT.
 
 ## Not planned yet
 - Use ChatCompletion during the interactive stage and hand it off to BatchAPI for the automatic stage.
