@@ -1,16 +1,17 @@
 from datetime import timedelta
 
 import numpy as np
-from openai import OpenAI
+from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionUserMessageParam, ChatCompletion
 from cachier import cachier
 
-from gpt_auto_retry import callWithAutoRetry
+from shared import NO_OR_YES
+from arbiter_interface import ArbiterInterface
 
-class Arbiter:
+class ArbiterGPT(ArbiterInterface):
     def __init__(
         self, 
-        client: OpenAI, 
+        client: AsyncOpenAI, 
         cache_stale_after: timedelta = timedelta(weeks=6),
     ):
         '''
@@ -22,7 +23,7 @@ class Arbiter:
         j = c(self.judge)
         self.judge = j   # type: ignore
     
-    def judge(
+    async def judge(
         self, model: str, prompt: str, 
         max_tokens: int = 1,
     ):
@@ -33,16 +34,14 @@ class Arbiter:
             content=prompt, 
             role='user', 
         )]
-        def f():
-            return self.client.chat.completions.create(
-                model=model, 
-                messages=history, 
-                max_tokens=max_tokens,
-                temperature=0,    # should be inconsequential. 
-                logprobs=True,
-                top_logprobs=5,
-            )
-        response: ChatCompletion = callWithAutoRetry(f)
+        response: ChatCompletion = await self.client.chat.completions.create(
+            model=model, 
+            messages=history, 
+            max_tokens=max_tokens,
+            temperature=0,    # should be inconsequential. 
+            logprobs=True,
+            top_logprobs=5,
+        )
         assert isinstance(response, ChatCompletion) # for static type
         choice = response.choices[0]
         lp = choice.logprobs
@@ -52,9 +51,9 @@ class Arbiter:
         yes, no = 0.0, 0.0
         for top in c[0].top_logprobs:
             prob: float = np.exp(top.logprob)
-            if top.token == 'Yes':
+            if top.token == NO_OR_YES[1]:
                 yes = prob
-            elif top.token == 'No':
+            elif top.token == NO_OR_YES[0]:
                 no = prob
         if yes + no == 0:
             print(f'{c[0].top_logprobs = }')
