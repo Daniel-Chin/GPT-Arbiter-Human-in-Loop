@@ -5,85 +5,54 @@ import typing as tp
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import Button, Footer, Header, Input, RadioButton, RadioSet, Static, Switch
+from textual.widget import Widget
+from textual.widgets import (
+    Button, Footer, Header, Input, RadioButton, RadioSet, 
+    Static, Switch, LoadingIndicator, Sparkline, 
+)
 
-from .shared import PromptAndExamples, Classifiee, QAPair
+from .shared import PromptAndExamples, Classifiee, titled
 from .arbiter_interface import ArbiterInterface
 from .arbiter_gpt import ArbiterGPT
 from .arbiter_dummy import ArbiterDummy
 
+class Histogram(Static):
+    """ASCII histogram widget for displaying decisions and confidence."""
+    
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.data = []  # Will store histogram data
+    
+    def render(self) -> str:
+        # TODO: Implement ASCII histogram rendering
+        # Example: [610010029]
+        #          No      Yes
+        return "[610010029]\nNo      Yes"
+    
+    def update_data(self, data) -> None:
+        """Update histogram data and refresh display."""
+        self.data = data
+        self.refresh()
+
+class StackedBar(Static):
+    """100% stacked bar widget for database coverage."""
+    
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.coverage_data = {}  # Will store coverage statistics
+    
+    def render(self) -> str:
+        # TODO: Implement stacked bar rendering
+        # Example: [44332100-----------]
+        return "[44332100-----------]"
+    
+    def update_coverage(self, coverage_data) -> None:
+        """Update coverage data and refresh display."""
+        self.coverage_data = coverage_data
+        self.refresh()
+
 class UI(App):
-    """Textual TUI shell for the GPT Arbiter human-in-loop flow."""
-
-    CSS = """
-    Screen {
-        layout: vertical;
-        background: $surface;
-    }
-
-    #main {
-        layout: vertical;
-        padding: 1 2;
-        gap: 1;
-    }
-
-    .title {
-        text-style: bold;
-        letter-spacing: 1;
-    }
-
-    .strip {
-        padding: 0 1;
-        border: tall $primary;
-        height: auto;
-    }
-
-    .strip Horizontal {
-        align: center middle;
-        gap: 1;
-    }
-
-    .label {
-        color: $text 50%;
-    }
-
-    .divider {
-        width: 1;
-        height: 100%;
-        background: $text 60%;
-        opacity: 0.4;
-    }
-
-    .histogram {
-        font-family: monospace;
-    }
-
-    .section-card {
-        border: tall $secondary;
-        padding: 1 2;
-        gap: 1;
-    }
-
-    .section-title {
-        text-style: bold;
-    }
-
-    .question {
-        height: auto;
-        border: round $boost;
-        padding: 1;
-    }
-
-    .explanation-input {
-        width: 100%;
-    }
-
-    #decision-controls {
-        align: left top;
-        gap: 1;
-    }
-    """
-
+    CSS_PATH = "styles.tcss"
     BINDINGS = [
         Binding("y", "label_yes", "Yes"),
         Binding("n", "label_no", "No"),
@@ -91,8 +60,9 @@ class UI(App):
         Binding("ctrl+enter", "submit", "Submit"),
         Binding("w", "ask_why", "Ask Why"),
         Binding("p", "toggle_pause", "Pause/Resume"),
-        Binding("-", "throttle_down", "Throttle -"),
-        Binding("+", "throttle_up", "Throttle +"),
+        Binding("-", "throttle_down", "Throttle"),
+        Binding("+", "throttle_up", "Throttle"),
+        Binding("t", "throttle_toggle", "Toggle Throttle"),
     ]
 
     def __init__(
@@ -115,111 +85,59 @@ class UI(App):
 
         self.prompt_and_examples = self.readPromptAndExamples()
 
+        self.title = "GPT Arbiter Human-in-Loop"
+
     def readPromptAndExamples(self) -> PromptAndExamples:
         with open(self.prompt_and_examples_filename, 'r') as f:
             j = json.load(f)
             return PromptAndExamples.model_validate(j)
     
     def compose(self) -> ComposeResult:
-        """Create child widgets for the app."""
+        # Header
         yield Header(show_clock=False)
-
-        main = Vertical(id="main")
-        main.mount(Static("GPT Arbiter Human-in-Loop", classes="title"))
-        main.mount(self._build_model_strip())
-        main.mount(self._build_status_strip())
-        main.mount(self._build_decision_histogram())
-        main.mount(self._build_query_card())
-        yield main
+        
+        # Model info and controls
+        with Horizontal(id="model-info"):
+            yield titled(Static("GPT-5-mini", classes='fr1 padding-h-1', id="model-name"), 'Model')
+            yield titled(Static("$ 0.01"    , classes='fr1 padding-h-1', id="cost-display"), 'Cost')
+            yield titled(Static("10 / sec"  , classes='fr1 padding-h-1', id="throttle-display"), 'Throttle')
+        
+        # Status section
+        with Horizontal(id="status-section"):
+            with titled(Horizontal(classes = 'fr1'), 'Status'):
+                yield Static("Paused", classes = 'auto-width margin-h-1')
+                yield Switch(value=False, id="pause-switch")
+                yield Static("Judging", classes = 'auto-width margin-h-1')
+                yield LoadingIndicator(id="loading-indicator")
+                yield Static("at 34 / 233.", id="progress-text", classes = 'auto-width margin-h-1')
+            with titled(Horizontal(classes = 'fr1'), 'Progress'):
+                yield StackedBar(id="coverage-bar")
+        
+        # Decisions histogram
+        with titled(Container(id="histogram-section"), 'Decisions and Confidence'):
+            yield Histogram(id="decisions-histogram")
+            
+        # Query section
+        with titled(Container(id="query-section"), 'Query Human', style = ('heavy', 'gray')):
+            yield Static("ID: ", id="query-id")
+            yield Static("", id="query-prompt")
+            
+            # GPT responses
+            with Container(id="gpt-responses"):
+                yield Static("", id="gpt-no-response")
+                yield Static("", id="gpt-yes-response")
+                yield Button("Ask GPT why", id="ask-why-btn")
+                
+            # Human input section
+            with Container(id="human-input"):
+                yield Static("What do you think?", id="human-prompt")
+                
+                with RadioSet(id="decision-radio"):
+                    yield RadioButton("Yes", id="yes-radio")
+                    yield RadioButton("No", id="no-radio")
+                    
+                yield Static("Explanation (optional):", id="explanation-label")
+                yield Input(placeholder="Enter explanation...", id="explanation-input")
+                yield Button("Submit", id="submit-btn")
 
         yield Footer()
-
-    # --- Layout builders -------------------------------------------------
-
-    def _build_model_strip(self) -> Vertical:
-        strip = Vertical(classes="strip")
-        row = Horizontal()
-        row.mount(Static("Model:", classes="label"))
-        row.mount(Static("", id="model-name"))
-        row.mount(self._divider())
-        row.mount(Static("Cost:", classes="label"))
-        row.mount(Static("", id="cost-indicator"))
-        row.mount(self._divider())
-        row.mount(Button("-", id="throttle-down"))
-        row.mount(Static("", id="throttle-display"))
-        row.mount(Button("+", id="throttle-up"))
-        strip.mount(row)
-        return strip
-
-    def _build_status_strip(self) -> Vertical:
-        strip = Vertical(classes="strip")
-        row = Horizontal()
-        row.mount(Static("Paused", classes="label"))
-        row.mount(Switch(id="status-toggle"))
-        row.mount(Static("Judging", classes="label"))
-        row.mount(self._divider())
-        row.mount(Static(" / ", id="progress-indicator"))
-        row.mount(self._divider())
-        row.mount(Static("Coverage:", classes="label"))
-        row.mount(Static("[]", id="coverage-hist", classes="histogram"))
-        strip.mount(row)
-        return strip
-
-    def _divider(self) -> Static:
-        return Static("", classes="divider")
-
-    def _build_decision_histogram(self) -> Vertical:
-        section = Vertical(classes="section-card")
-        section.mount(Static("Decisions and Confidence", classes="section-title"))
-        # section.mount(Static("[610010029]", id="decision-histogram", classes="histogram"))
-        # section.mount(Static("No      Yes", classes="histogram"))
-        return section
-
-    def _build_query_card(self) -> Vertical:
-        card = Vertical(classes="section-card")
-        card.mount(Static("Query Human", classes="section-title"))
-        card.mount(Static("ID: ", id="query-id"))
-        card.mount(Static("", id="question", classes="question"))
-
-        gpt_reasoning = Vertical()
-        gpt_reasoning.mount(Static("GPT said \"No\" (99%) because \"...\"", id="gpt-no"))
-        gpt_reasoning.mount(Static("And \"Yes\" (1%) because \"...\"", id="gpt-yes"))
-        gpt_reasoning.mount(Button("Ask GPT why", id="ask-why-button"))
-        card.mount(gpt_reasoning)
-
-        decision_area = Vertical()
-        decision_area.mount(Static("What do you think?", classes="section-title"))
-        radio = RadioSet(id="decision-controls")
-        radio.mount(RadioButton("Yes", id="decision-yes"))
-        radio.mount(RadioButton("No", id="decision-no"))
-        radio.mount(RadioButton("Skip", id="decision-skip"))
-        decision_area.mount(radio)
-        decision_area.mount(Input(placeholder="Explanation (optional)", id="explanation-input", classes="explanation-input"))
-        decision_area.mount(Button("Submit", id="submit-button", variant="primary"))
-        card.mount(decision_area)
-
-        return card
-
-    def action_label_yes(self) -> None:  # pragma: no cover - placeholder
-        """Handle the `y` binding. Logic is supplied by the caller."""
-
-    def action_label_no(self) -> None:  # pragma: no cover - placeholder
-        """Handle the `n` binding. Logic is supplied by the caller."""
-
-    def action_focus_explanation(self) -> None:  # pragma: no cover - placeholder
-        """Focus the explanation input. Implementation deferred."""
-
-    def action_submit(self) -> None:  # pragma: no cover - placeholder
-        """Submit the human decision. Implementation deferred."""
-
-    def action_ask_why(self) -> None:  # pragma: no cover - placeholder
-        """Trigger Ask-GPT-why flow. Implementation deferred."""
-
-    def action_toggle_pause(self) -> None:  # pragma: no cover - placeholder
-        """Toggle between judging and paused states."""
-
-    def action_throttle_down(self) -> None:  # pragma: no cover - placeholder
-        """Decrease the throttle. Implementation deferred."""
-
-    def action_throttle_up(self) -> None:  # pragma: no cover - placeholder
-        """Increase the throttle. Implementation deferred."""

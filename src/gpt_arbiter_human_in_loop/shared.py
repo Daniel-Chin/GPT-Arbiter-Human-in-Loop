@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
+from textual.widget import Widget
 
 NO_OR_YES = ('No', 'Yes')
 
@@ -28,3 +29,8 @@ class PromptAndExamples(BaseModel):
             prompt=self.prompt,
             examples=[*self.examples, example],
         )
+
+def titled(w: Widget, /, title: str, style = ('solid', 'gray')):
+    w.styles.border = style
+    w.border_title = title
+    return w

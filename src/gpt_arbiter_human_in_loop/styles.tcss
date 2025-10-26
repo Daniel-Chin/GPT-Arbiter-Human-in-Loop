@@ -1,0 +1,37 @@
+.fr1 {
+    width: 1fr;
+}
+
+.auto-width {
+    width: auto;
+}
+
+.margin-h-1 {
+    margin: 0 1;
+}
+.padding-h-1 {
+    padding: 0 1;
+}
+
+Horizontal {
+    height: auto;
+}
+
+Container {
+    height: auto;
+}
+
+Switch {
+    border: none;
+    padding: 0;
+}
+.switch--slider {
+    # color: #ddd;
+    background: #444;
+}
+
+LoadingIndicator {
+    height: auto;
+    width: auto;
+    margin: 0 1;
+}
