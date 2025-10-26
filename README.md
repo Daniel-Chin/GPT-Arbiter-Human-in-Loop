@@ -10,14 +10,18 @@
 - Cached API responses save costs when you rerun after interruption.  
   - With cache key as the full prompt and model selection, ensuring validity.  
 - Terminal ascii GUI (with `textual`):  
-  - Displays in realtime the histogram of classification confidence.
-    - In binary classification, one hist represents decisions+confidence. In multi classification, one hist shows the confidence and one 100% stacked bar chart shows the decisions.
+  - Displays in realtime the histogram of decisions+confidence.
   - Displays in realtime the database coverage, using different symbols to represent "unvisited", "visited with latest prompt", "visited with stale (-2) prompt", etc.
   - Displays the running cost in USD.  
   - Accepts user commands to:
-    - label the current query.  
+    - label the current query.
+      - Optionally interrogate the model for its rationale.
+      - Optionally explain the reason.  
     - Set throttling.
     - Pause/resume background classification.
 
-## Maybe todo
+## Not planned yet
 - Use ChatCompletion during the interactive stage and hand it off to BatchAPI for the automatic stage.
+- Support more-than-2-way classification.
+  - GUI. In binary classification, one hist represents decisions+confidence. In multi classification, one hist shows the confidence and one 100% stacked bar chart shows the decisions.
+- What if the model is confidently wrong? Set fixed prob of unconditioned sampling queries for human.
