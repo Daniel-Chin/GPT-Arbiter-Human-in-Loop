@@ -6,8 +6,11 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "cachier>=4.1.0",
+    "dotenv>=0.9.9",
     "numpy>=2.3.4",
     "openai>=2.6.1",
+    "pydantic>=2.12.3",
+    "tenacity>=9.1.2",
     "textual>=6.4.0",
     "tqdm>=4.67.1",
 ]
