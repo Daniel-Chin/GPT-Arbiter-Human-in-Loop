@@ -118,26 +118,27 @@ class UI(App):
             yield Histogram(id="decisions-histogram")
             
         # Query section
-        with titled(Container(id="query-section"), 'Query Human', style = ('heavy', 'gray')):
-            yield Static("ID: ", id="query-id")
-            yield Static("", id="query-prompt")
+        with Container(id="query-section"):
+            yield Static("The GPT arbiter is entrusting you with the following decision!", id="greeter", classes='auto-width margin-h-1')
+            yield Static("ID: ...", id="query-id", classes='auto-width margin-h-1')
+            yield Static("", id="query-question", classes='auto-width margin-h-1')
             
             # GPT responses
-            with Container(id="gpt-responses"):
-                yield Static("", id="gpt-no-response")
-                yield Static("", id="gpt-yes-response")
+            with Horizontal(id="gpt-inspection"):
+                with Container(id="gpt-responses", classes='auto-width margin-h-1'):
+                    yield Static('GPT said "No" (1%)', classes='auto-width', id="gpt-no-response")
+                    yield Static('GPT said "Yes" (99%)', classes='auto-width', id="gpt-yes-response")
                 yield Button("Ask GPT why", id="ask-why-btn")
-                
+            
             # Human input section
-            with Container(id="human-input"):
-                yield Static("What do you think?", id="human-prompt")
-                
-                with RadioSet(id="decision-radio"):
-                    yield RadioButton("Yes", id="yes-radio")
-                    yield RadioButton("No", id="no-radio")
-                    
-                yield Static("Explanation (optional):", id="explanation-label")
-                yield Input(placeholder="Enter explanation...", id="explanation-input")
-                yield Button("Submit", id="submit-btn")
+            with Horizontal(id="human-input"):
+                with Horizontal(id="human-yn", classes='auto-width'):
+                    yield Static("What do you think?", id="human-prompt", classes = 'auto-width margin-h-1')
+                    yield Static("No", classes = 'auto-width margin-h-1 green')
+                    yield Switch(value=False, id="human-label-switch")
+                    yield Static("Yes", classes = 'auto-width margin-h-1 green')    # todo: only green if selected
+                yield Input(placeholder="(Optional) Explain...", id="explanation-input")
+            
+            yield Button("Submit", id="submit-btn")
 
         yield Footer()

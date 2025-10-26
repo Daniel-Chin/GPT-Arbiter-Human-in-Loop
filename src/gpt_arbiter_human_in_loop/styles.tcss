@@ -23,7 +23,7 @@ Container {
 
 Switch {
     border: none;
-    padding: 0;
+    padding: 0 1;
 }
 .switch--slider {
     # color: #ddd;
@@ -34,4 +34,35 @@ LoadingIndicator {
     height: auto;
     width: auto;
     margin: 0 1;
+}
+
+#query-section {
+    padding: 0 1;
+}
+
+#query-question {
+    color: yellow;
+}
+
+#gpt-responses {
+    color: cyan;
+}
+
+Button {
+    color: black;
+    background: cyan;
+    border: none;
+}
+
+.green {
+    color: #0f0;
+}
+
+#human-yn {
+    margin-top: 1;
+}
+
+Input {
+    width: auto;
+    color: #0f0;
 }
