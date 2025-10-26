@@ -7,10 +7,10 @@ from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import Button, Footer, Header, Input, RadioButton, RadioSet, Static, Switch
 
-from shared import PromptAndExamples, Classifiee, QAPair
-from arbiter_interface import ArbiterInterface
-from arbiter_gpt import ArbiterGPT
-from arbiter_dummy import ArbiterDummy
+from .shared import PromptAndExamples, Classifiee, QAPair
+from .arbiter_interface import ArbiterInterface
+from .arbiter_gpt import ArbiterGPT
+from .arbiter_dummy import ArbiterDummy
 
 class UI(App):
     """Textual TUI shell for the GPT Arbiter human-in-loop flow."""

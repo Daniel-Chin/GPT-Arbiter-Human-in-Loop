@@ -1,7 +1,7 @@
 import random
 import asyncio
 
-from arbiter_interface import ArbiterInterface
+from .arbiter_interface import ArbiterInterface
 
 class ArbiterDummy(ArbiterInterface):
     async def judge(

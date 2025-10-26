@@ -5,8 +5,8 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionUserMessageParam, ChatCompletion
 from cachier import cachier
 
-from shared import NO_OR_YES
-from arbiter_interface import ArbiterInterface
+from .shared import NO_OR_YES
+from .arbiter_interface import ArbiterInterface
 
 class ArbiterGPT(ArbiterInterface):
     def __init__(
