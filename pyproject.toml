@@ -1,0 +1,11 @@
+[project]
+name = "gpt-arbiter-human-in-loop"
+version = "0.1.0"
+description = "Uses GPT to classify items."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "cachier>=4.1.0",
+    "openai>=2.6.1",
+    "tqdm>=4.67.1",
+]
