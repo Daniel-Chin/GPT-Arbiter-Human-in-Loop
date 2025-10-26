@@ -1,0 +1,31 @@
+// [[xxx]] is comment
+// {var name} is a displayed variable (but not always literally a python variable)
+// {{eg}} is a displayed variable while "eg" is an example
+// visual styling e.g. "----" is arbitrary and should just be default
+// histogram is one-line ascii, e.g. 
+// [610010029]
+// No      Yes
+
+
+[[header]] GPT Arbiter Human-in-Loop
+----
+Model: {{GPT-5-mini}} | Cost: {{$ 0.01}} | <-> Throttle: {{10 / sec}} <+>
+----
+Status: <toggle-button {{judging/paused}}>, at {{34 / 233}}. | <histogram: database coverage {{[44332100-----------]}}>
+----
+Decisions and Confidence: <histogram>
+==== Query Human ====
+ID: {id}
+----
+{prompt % classifiee}
+----
+GPT said "No" ({{99%}}) because "{{blahblah}}"
+And "Yes" ({{1%}}) because "{{blahblah}}"
+<button Ask-GPT-why>
+----
+What do you think?
+<toggle-button Yes/No default=None>
+Explanation (optional): <text-input-field>
+<button Submit>
+====
+[[footer]] y; n; focus_explanation; submit; ask_why; (un)pause; -; +;
