@@ -11,7 +11,7 @@
 ----
 Model: {{GPT-5-mini}} | Cost: {{$ 0.01}} | <-> Throttle: {{10 / sec}} <+>
 ----
-Status: <toggle-button {{judging/paused}}>, at {{34 / 233}}. | <histogram: database coverage {{[44332100-----------]}}>
+Status: <toggle-button {{judging/paused}}>, at {{34 / 233}}. | <100%-stacked-bar: database_coverage {{[44332100-----------]}}>
 ----
 Decisions and Confidence: <histogram>
 ==== Query Human ====
