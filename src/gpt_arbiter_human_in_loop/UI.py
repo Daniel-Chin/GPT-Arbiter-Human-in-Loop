@@ -43,6 +43,7 @@ class UI(App):
         prompt_and_examples_filename: str,
         all_ids: tp.Sequence[str],
         idToClassifiee: tp.Callable[[str], Classifiee],
+        model_name: str = 'gpt-5-nano',
         initial_throttle_qps: float = 10.0, # queries per second
     ) -> None:
         super().__init__()
@@ -51,13 +52,16 @@ class UI(App):
         self.prompt_and_examples_filename = prompt_and_examples_filename
         self.all_ids = all_ids
         self.idToClassifiee = idToClassifiee
+        self.model_name = model_name
 
         self.throttle_active = True
         self.throttle_qps = initial_throttle_qps
         self.is_paused = False
 
         self.dataset: dict[str, DataItem] = {}
+        self.cursor = 0
         self.last_gpt_time = 0.0
+        self.arbitTask: asyncio.Task | None = None
 
         self.prompt_and_examples = self.readPromptAndExamples()
 
@@ -150,6 +154,25 @@ class UI(App):
     @on(RadioSet.Changed, '#on-off')
     def on_toggle_gpt_switch(self) -> None:
         self.is_paused = self.query_one('#off-radio', RadioButton).value
+        if not self.is_paused:
+            if self.arbitTask is None:
+                self.arbitTask = asyncio.create_task(self.arbit(
+                    self.all_ids[self.cursor], 
+                ))
+    
+    async def arbit(self, id: str, delay: float = 0.0) -> None:
+        await asyncio.sleep(delay)
+        self.last_gpt_time = time.time()
+        result = await self.arbiter.judge(
+            model=self.model_name, 
+            prompt=self.prompt_and_examples.render(
+                self.idToClassifiee(id),
+            ),
+            max_tokens=1,
+        )
+        self.arbitTask = None
+        # todo apply result
+        # todo initiate next arbit considering pause and throttle
     
     def modifyThrottle(self, delta: float) -> None:
         self.throttle_qps *= math.exp(delta * .5)

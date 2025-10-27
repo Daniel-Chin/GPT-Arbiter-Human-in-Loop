@@ -18,6 +18,17 @@ class QAPair(BaseModel):
         frozen=True,
     )
 
+    def render(self) -> str:
+        s = f'''
+Query:
+{self.question}
+Reference:
+{NO_OR_YES[self.no_or_yes]}
+'''.strip()
+        if self.explanation is not None:
+            s += f', because:\n{self.explanation}'
+        return s
+
 class PromptAndExamples(BaseModel):
     prompt: str
     examples: list[QAPair]
@@ -26,6 +37,11 @@ class PromptAndExamples(BaseModel):
         frozen=True,
     )
 
+    def render(self, classifiee: Classifiee) -> str:
+        return self.prompt.replace('{EXAMPLES}', '\n\n'.join(
+            ex.render() for ex in self.examples
+        )).replace('{CLASSIFIEE}', classifiee)
+    
     def addExample(self, example: QAPair) -> PromptAndExamples:
         return PromptAndExamples(
             prompt=self.prompt,
