@@ -45,8 +45,8 @@ Button {
 }
 
 #upper-pane {
-    grid-size: 4;
-    grid-columns: auto 1fr 1fr 1fr;
+    grid-size: 5;
+    grid-columns: auto 1fr 1.5fr 1fr 2fr;
     grid-rows: auto auto;
 }
 
@@ -55,12 +55,21 @@ Button {
     height: 100%;
 }
 
+#throttle-pane {
+    column-span: 2;
+}
+
+#throttle-down-btn{
+    margin-left: 0;
+}
+
 #on-off {
     column-span: 2;
     height: auto;
 }
 
 #decisions-histogram {
+    column-span: 2;
     height: auto;
 }
 
@@ -99,7 +108,6 @@ Button {
     grid-size: 3;
     grid-columns: auto auto 1fr;
     grid-rows: auto;
-    padding: 0 1;
 }
 
 #yes-no {

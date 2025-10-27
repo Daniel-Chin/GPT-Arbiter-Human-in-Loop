@@ -38,4 +38,5 @@ def titled(
     if skip_bottom:
         w.styles.border_bottom = None
     w.border_title = title
+    w.styles.padding = (0, 1)
     return w

@@ -54,15 +54,15 @@ class StackedBar(Static):
 class UI(App):
     CSS_PATH = "styles.tcss"
     BINDINGS = [
-        Binding("y", "label_yes", "Yes"),
-        Binding("n", "label_no", "No"),
-        Binding("e", "focus_explanation", "Focus Explanation"),
-        Binding("ctrl+enter", "submit", "Submit"),
-        Binding("w", "ask_why", "Ask Why"),
-        Binding("p", "toggle_pause", "Pause/Resume"),
-        Binding("-", "throttle_down", "Throttle"),
-        Binding("+", "throttle_up", "Throttle"),
-        Binding("t", "throttle_toggle", "Toggle Throttle"),
+        Binding("y", "label_yes", "/"),
+        Binding("n", "label_no", "."),
+        Binding("e", "focus_explanation", "Explain."),
+        Binding("ctrl+enter", "submit", "Submit."),
+        Binding("w", "ask_why", "Why?"),
+        Binding("p", "toggle_pause", "(Un)Pause."),
+        Binding("-", "throttle_down", "/"),
+        Binding("+", "throttle_up", "Throttle."),
+        Binding("t", "throttle_toggle", "Toggle Throttle."),
     ]
 
     def __init__(
@@ -97,13 +97,13 @@ class UI(App):
         yield Header(show_clock=False)
         
         with Grid(id="upper-pane"):
-            yield titled(Static("$ 0.01", classes='padding-h-1', id="cost-display"), 'Cost')
-            with titled(Horizontal(), 'Throttle'):
+            yield titled(Static("$ 0.01", id="cost-display"), 'Cost')
+            with titled(Horizontal(id='throttle-pane'), 'Throttle'):
                 yield Button("-", id="throttle-down-btn")
                 yield Static("10 / sec"  , classes='padding-h-1 auto-width', id="throttle-display")
                 yield Button("+", id="throttle-up-btn")
                 yield Button("Engage", id="throttle-toggle-btn")
-            yield titled(Static("GPT-5-mini", classes='padding-h-1', id="model-name"), 'Model')
+            yield titled(Static("GPT-5-mini", id="model-name"), 'Model')
             with titled(Container(id='progress-box'), 'Progress', skip_bottom=False):
                 yield Static("lol")
             with titled(RadioSet(id='on-off'), '', skip_bottom=False):
@@ -124,12 +124,12 @@ class UI(App):
                     yield Static('GPT said "Yes" (99%).', classes='auto-width', id="gpt-yes-response")
                 yield Button("Ask GPT\nwhy", id="ask-why-btn")
             
-            # Human input section
-            with titled(Grid(id="human-input"), 'What do you think?', skip_bottom=False):
-                yield Button("Submit", id="submit-btn")
-                with RadioSet(id='yes-no'):
-                    yield RadioButton("No", id="no-radio")
-                    yield RadioButton("Yes", id="yes-radio")
-                yield Input(placeholder="(Optional) Explain...", id="explanation-input")
+        # Human input section
+        with titled(Grid(id="human-input"), 'What do you think?', skip_bottom=False):
+            yield Button("Submit", id="submit-btn")
+            with RadioSet(id='yes-no'):
+                yield RadioButton("No", id="no-radio")
+                yield RadioButton("Yes", id="yes-radio")
+            yield Input(placeholder="(Optional) Explain...", id="explanation-input")
 
-        yield Footer()
+        yield Footer(compact=True)
