@@ -1,9 +1,13 @@
 import typing as tp
 
+from textual.reactive import reactive
 from textual.app import RenderResult
 from textual.widget import Widget
 
 class StackedBar(Widget):
+    data: reactive[tp.Sequence[str]] = reactive('')
+    data_cursor: reactive[int] = reactive(0)
+
     def __init__(self, symbols: tp.Sequence[str], *args, **kw) -> None:
         '''
         `symbols` order matters: late-pooling.
@@ -15,7 +19,7 @@ class StackedBar(Widget):
             if len(s) != 1:
                 print(f'Warning: StackedBar symbols should be single char. Ensure {s} is intended. (Markdown could mis-trigger this warning.)')
         
-        self.data: tp.Sequence[str] | None = None
+        self.data = ''
         self.data_cursor = 0
     
     def render(self) -> RenderResult:

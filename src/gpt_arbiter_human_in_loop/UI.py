@@ -5,6 +5,7 @@ import time
 import math
 
 from textual import on
+from textual.reactive import reactive
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Grid
@@ -32,6 +33,9 @@ class UI(App):
         Binding("t", "throttle_toggle", "Toggle Throttle."),
     ]
 
+    throttle_active: reactive[bool] = reactive(True)
+    throttle_qps: reactive[float] = reactive(10.0)
+
     def __init__(
         self, 
         arbiter: ArbiterInterface,
@@ -52,7 +56,6 @@ class UI(App):
 
         self.throttle_active = True
         self.throttle_qps = initial_throttle_qps
-        self.is_paused = False
 
         self.persistent = Persistent(rw_json_path)
         self.Context = self.persistent.Context
@@ -116,10 +119,12 @@ class UI(App):
     def action_label_yes(self) -> None:
         b = self.query_one('#yes-radio', RadioButton)
         b.value = True
+        self.myUpdate()
     
     def action_label_no(self) -> None:
         b = self.query_one('#no-radio', RadioButton)
         b.value = True
+        self.myUpdate()
 
     def action_focus_explanation(self) -> None:
         e = self.query_one('#explanation-input', Input)
@@ -150,8 +155,7 @@ class UI(App):
     
     @on(RadioSet.Changed, '#on-off')
     def on_toggle_gpt_switch(self) -> None:
-        self.is_paused = self.query_one('#off-radio', RadioButton).value
-        if not self.is_paused:
+        if self.query_one('#on-radio', RadioButton).value:
             if self.arbitTask is None:
                 self.arbitNext()
     
@@ -204,7 +208,8 @@ class UI(App):
         self.cursor += 1
         self.cursor %= len(self.all_ids)
         self.arbitTask = None
-        if self.is_paused:
+        self.myUpdate()
+        if self.query_one('#off-radio', RadioButton).value:
             return
         self.arbitNext()
     
@@ -224,3 +229,12 @@ class UI(App):
     
     def action_throttle_toggle(self) -> None:
         self.throttle_active = not self.throttle_active
+    
+    def on_mount(self) -> None:
+        self.myUpdate()
+    
+    def myUpdate(self) -> None:
+        self.query_one('#submit-btn', Button).disabled = (
+            self.query_one('#yes-radio', RadioButton).value is False and
+            self.query_one('#no-radio', RadioButton).value is False
+        )
