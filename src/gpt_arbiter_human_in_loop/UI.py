@@ -11,45 +11,12 @@ from textual.widgets import (
     Static, Switch, LoadingIndicator, Sparkline, 
 )
 
-from .shared import PromptAndExamples, Classifiee, titled
+from .shared import PromptAndExamples, Classifiee, titled, ItemStatus
+from .stacked_bar_ascii import StackedBar
+from .histogram_ascii import Histogram
 from .arbiter_interface import ArbiterInterface
 from .arbiter_gpt import ArbiterGPT
 from .arbiter_dummy import ArbiterDummy
-
-class Histogram(Static):
-    """ASCII histogram widget for displaying decisions and confidence."""
-    
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.data = []  # Will store histogram data
-    
-    def render(self) -> str:
-        # TODO: Implement ASCII histogram rendering
-        # Example: [610010029]
-        #          No      Yes
-        return "[610010029]\nNo      Yes"
-    
-    def update_data(self, data) -> None:
-        """Update histogram data and refresh display."""
-        self.data = data
-        self.refresh()
-
-class StackedBar(Static):
-    """100% stacked bar widget for database coverage."""
-    
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.coverage_data = {}  # Will store coverage statistics
-    
-    def render(self) -> str:
-        # TODO: Implement stacked bar rendering
-        # Example: [44332100-----------]
-        return "[44332100-----------]"
-    
-    def update_coverage(self, coverage_data) -> None:
-        """Update coverage data and refresh display."""
-        self.coverage_data = coverage_data
-        self.refresh()
 
 class UI(App):
     CSS_PATH = "styles.tcss"
@@ -83,6 +50,8 @@ class UI(App):
         self.throttle_qps = initial_throttle_qps
         self.is_paused = False
 
+        self.progress: dict[str, ItemStatus.Base] = {}
+
         self.prompt_and_examples = self.readPromptAndExamples()
 
         self.title = "GPT Arbiter Human-in-Loop"
@@ -105,11 +74,13 @@ class UI(App):
                 yield Button("Engage", id="throttle-toggle-btn")
             yield titled(Static("GPT-5-mini", id="model-name"), 'Model')
             with titled(Container(id='progress-box'), 'Progress', skip_bottom=False):
-                yield Static("lol")
+                yield StackedBar('-0123456789', id='stacked-bar')
             with titled(RadioSet(id='on-off'), '', skip_bottom=False):
                 yield RadioButton("Judge", id="on-radio")
                 yield RadioButton("Pause", id="off-radio", value=True)
-            yield titled(Histogram(id="decisions-histogram"), 'Decisions and Confidence', skip_bottom=False)
+            yield titled(Histogram(
+                ('No', 'Yes'), id="decisions-histogram",
+            ), 'Decisions and Confidence', skip_bottom=False)
         
         # Query section
         with Container(id="query-section"):

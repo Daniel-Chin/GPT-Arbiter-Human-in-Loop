@@ -1,4 +1,6 @@
 from __future__ import annotations
+from dataclasses import dataclass
+from abc import ABC
 
 from pydantic import BaseModel, ConfigDict
 from textual.widget import Widget
@@ -40,3 +42,16 @@ def titled(
     w.border_title = title
     w.styles.padding = (0, 1)
     return w
+
+class ItemStatus(ABC):
+    class Base(ABC):
+        pass
+    @dataclass(frozen=True)
+    class Unvisited(Base):
+        pass
+    @dataclass(frozen=True)
+    class Classified(Base):
+        pass
+    @dataclass(frozen=True)
+    class Outdated(Base):
+        value: int
