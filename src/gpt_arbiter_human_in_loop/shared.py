@@ -34,13 +34,13 @@ class PromptAndExamples(BaseModel):
 
 def titled(
     w: Widget, /, title: str, skip_bottom: bool = True,
-    style = ('solid', '#999'), 
+    style = ('round', '#999'), padding = (0, 1),
 ):
     w.styles.border = style
     if skip_bottom:
         w.styles.border_bottom = None
     w.border_title = title
-    w.styles.padding = (0, 1)
+    w.styles.padding = padding
     return w
 
 class ItemStatus(ABC):

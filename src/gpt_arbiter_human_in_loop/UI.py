@@ -75,7 +75,7 @@ class UI(App):
             yield titled(Static("GPT-5-mini", id="model-name"), 'Model')
             with titled(Container(id='progress-box'), 'Progress', skip_bottom=False):
                 yield StackedBar('-0123456789', id='stacked-bar')
-            with titled(RadioSet(id='on-off'), '', skip_bottom=False):
+            with titled(RadioSet(id='on-off'), 'GPT Switch', skip_bottom=False):
                 yield RadioButton("Judge", id="on-radio")
                 yield RadioButton("Pause", id="off-radio", value=True)
             yield titled(Histogram(

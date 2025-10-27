@@ -47,7 +47,7 @@ Button {
 #upper-pane {
     grid-size: 5;
     grid-columns: auto 1fr 1.5fr 1fr 2fr;
-    grid-rows: auto auto;
+    grid-rows: auto 4;
 }
 
 #progress-box {
@@ -87,6 +87,10 @@ Button {
 #     width: auto;
 #     margin: 0 1;
 # }
+
+#greeter {
+    color: #aaa;
+}
 
 #query-section {
     padding: 0 1;
