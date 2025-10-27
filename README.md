@@ -20,6 +20,10 @@
     - Set throttling.
     - Pause/resume background classification.
   - Preview prompts from the perspective of ChatGPT.
+- Query selection balances uncertainty and recency.
+  - Old uncertainty may have already been addressed.
+  - Hyperparam: data diversity $\Lambda$. Its inverse, $1 / \Lambda$, equals the probability that labeling A significantly explains B, where A and B are independently drawn from the data distribution.
+  - The average information gain of querying a datapoint currently classified k queries ago with probability simplex (p, 1-p) is therefore $H_2(p)(1-1/\Lambda)^k$ where binary entropy $H_2(p) = -p log_2(p) - (1-p) log_2(1-p)$
 
 ## Not planned yet
 - Use ChatCompletion during the interactive stage and hand it off to BatchAPI for the automatic stage.
