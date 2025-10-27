@@ -4,7 +4,7 @@ import typing as tp
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container, Horizontal, Grid
 from textual.widget import Widget
 from textual.widgets import (
     Button, Footer, Header, Input, RadioButton, RadioSet, 
@@ -96,27 +96,21 @@ class UI(App):
         # Header
         yield Header(show_clock=False)
         
-        # Model info and controls
-        with Horizontal(id="model-info"):
-            yield titled(Static("GPT-5-mini", classes='fr1 padding-h-1', id="model-name"), 'Model')
-            yield titled(Static("$ 0.01"    , classes='fr1 padding-h-1', id="cost-display"), 'Cost')
-            yield titled(Static("10 / sec"  , classes='fr1 padding-h-1', id="throttle-display"), 'Throttle')
+        with Grid(id="upper-pane"):
+            yield titled(Static("$ 0.01", classes='padding-h-1', id="cost-display"), 'Cost')
+            with titled(Horizontal(), 'Throttle'):
+                yield Button("-", id="throttle-down-btn")
+                yield Static("10 / sec"  , classes='padding-h-1 auto-width', id="throttle-display")
+                yield Button("+", id="throttle-up-btn")
+                yield Button("Engage", id="throttle-toggle-btn")
+            yield titled(Static("GPT-5-mini", classes='padding-h-1', id="model-name"), 'Model')
+            with titled(Container(id='progress-box'), 'Progress', skip_bottom=False):
+                yield Static("lol")
+            with titled(RadioSet(id='on-off'), '', skip_bottom=False):
+                yield RadioButton("Judge", id="on-radio")
+                yield RadioButton("Pause", id="off-radio", value=True)
+            yield titled(Histogram(id="decisions-histogram"), 'Decisions and Confidence', skip_bottom=False)
         
-        # Status section
-        with Horizontal(id="status-section"):
-            with titled(Horizontal(classes = 'fr1'), 'Status'):
-                yield Static("Paused", classes = 'auto-width margin-h-1')
-                yield Switch(value=False, id="pause-switch")
-                yield Static("Judging", classes = 'auto-width margin-h-1')
-                yield LoadingIndicator(id="loading-indicator")
-                yield Static("at 34 / 233.", id="progress-text", classes = 'auto-width margin-h-1')
-            with titled(Horizontal(classes = 'fr1'), 'Progress'):
-                yield StackedBar(id="coverage-bar")
-        
-        # Decisions histogram
-        with titled(Container(id="histogram-section"), 'Decisions and Confidence'):
-            yield Histogram(id="decisions-histogram")
-            
         # Query section
         with Container(id="query-section"):
             yield Static("The GPT arbiter is entrusting you with the following decision!", id="greeter", classes='auto-width margin-h-1')
@@ -126,19 +120,16 @@ class UI(App):
             # GPT responses
             with Horizontal(id="gpt-inspection"):
                 with Container(id="gpt-responses", classes='auto-width margin-h-1'):
-                    yield Static('GPT said "No" (1%)', classes='auto-width', id="gpt-no-response")
-                    yield Static('GPT said "Yes" (99%)', classes='auto-width', id="gpt-yes-response")
-                yield Button("Ask GPT why", id="ask-why-btn")
+                    yield Static('GPT said "No" (1%).', classes='auto-width', id="gpt-no-response")
+                    yield Static('GPT said "Yes" (99%).', classes='auto-width', id="gpt-yes-response")
+                yield Button("Ask GPT\nwhy", id="ask-why-btn")
             
             # Human input section
-            with Horizontal(id="human-input"):
-                with Horizontal(id="human-yn", classes='auto-width'):
-                    yield Static("What do you think?", id="human-prompt", classes = 'auto-width margin-h-1')
-                    yield Static("No", classes = 'auto-width margin-h-1 green')
-                    yield Switch(value=False, id="human-label-switch")
-                    yield Static("Yes", classes = 'auto-width margin-h-1 green')    # todo: only green if selected
+            with titled(Grid(id="human-input"), 'What do you think?', skip_bottom=False):
+                yield Button("Submit", id="submit-btn")
+                with RadioSet(id='yes-no'):
+                    yield RadioButton("No", id="no-radio")
+                    yield RadioButton("Yes", id="yes-radio")
                 yield Input(placeholder="(Optional) Explain...", id="explanation-input")
-            
-            yield Button("Submit", id="submit-btn")
 
         yield Footer()

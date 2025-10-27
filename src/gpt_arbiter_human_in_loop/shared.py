@@ -30,7 +30,12 @@ class PromptAndExamples(BaseModel):
             examples=[*self.examples, example],
         )
 
-def titled(w: Widget, /, title: str, style = ('solid', 'gray')):
+def titled(
+    w: Widget, /, title: str, skip_bottom: bool = True,
+    style = ('solid', '#999'), 
+):
     w.styles.border = style
+    if skip_bottom:
+        w.styles.border_bottom = None
     w.border_title = title
     return w

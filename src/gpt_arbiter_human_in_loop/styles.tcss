@@ -21,20 +21,63 @@ Container {
     height: auto;
 }
 
-Switch {
-    border: none;
-    padding: 0 1;
-}
-.switch--slider {
-    # color: #ddd;
-    background: #444;
+Grid {
+    height: auto;
 }
 
-LoadingIndicator {
-    height: auto;
-    width: auto;
+RadioSet {
+    background: transparent;
+}
+RadioButton {
+    background: transparent;
+}
+# .toggle--button {
+#     background: transparent;
+# }
+
+Button {
+    color: black;
+    background: #ccc;
+    border: none;
+    min-width: 0;
+    padding: 0 1;
     margin: 0 1;
 }
+
+#upper-pane {
+    grid-size: 4;
+    grid-columns: auto 1fr 1fr 1fr;
+    grid-rows: auto auto;
+}
+
+#progress-box {
+    row-span: 2;
+    height: 100%;
+}
+
+#on-off {
+    column-span: 2;
+    height: auto;
+}
+
+#decisions-histogram {
+    height: auto;
+}
+
+# Switch {
+#     border: none;
+#     padding: 0 1;
+# }
+# .switch--slider {
+#     # color: #ddd;
+#     background: #444;
+# }
+
+# LoadingIndicator {
+#     height: auto;
+#     width: auto;
+#     margin: 0 1;
+# }
 
 #query-section {
     padding: 0 1;
@@ -48,21 +91,29 @@ LoadingIndicator {
     color: cyan;
 }
 
-Button {
-    color: black;
-    background: cyan;
-    border: none;
-}
-
 .green {
     color: #0f0;
 }
 
-#human-yn {
-    margin-top: 1;
+#human-input {
+    grid-size: 3;
+    grid-columns: auto auto 1fr;
+    grid-rows: auto;
+    padding: 0 1;
+}
+
+#yes-no {
+    height: auto;
+    border: none;
 }
 
 Input {
-    width: auto;
     color: #0f0;
+    background: transparent;
+    border: none;
+    border-bottom: solid #ccc;
+}
+
+#submit-btn {
+    margin-top: 1;
 }
