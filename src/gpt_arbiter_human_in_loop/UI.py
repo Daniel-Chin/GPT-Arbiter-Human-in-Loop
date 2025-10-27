@@ -1,22 +1,27 @@
 import asyncio
 import json
 import typing as tp
+import time
+from dataclasses import dataclass
+import math
 
+from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Grid
-from textual.widget import Widget
 from textual.widgets import (
-    Button, Footer, Header, Input, RadioButton, RadioSet, 
-    Static, Switch, LoadingIndicator, Sparkline, 
+    Button, Footer, Header, Input, RadioButton, RadioSet, Static, 
 )
 
-from .shared import PromptAndExamples, Classifiee, titled, ItemStatus
+from .shared import PromptAndExamples, Classifiee, titled, ItemStatus, QAPair
 from .stacked_bar_ascii import StackedBar
 from .histogram_ascii import Histogram
 from .arbiter_interface import ArbiterInterface
-from .arbiter_gpt import ArbiterGPT
-from .arbiter_dummy import ArbiterDummy
+
+@dataclass(frozen=True)
+class DataItem:
+    qaPair: QAPair
+    status: ItemStatus.Base
 
 class UI(App):
     CSS_PATH = "styles.tcss"
@@ -47,10 +52,12 @@ class UI(App):
         self.all_ids = all_ids
         self.idToClassifiee = idToClassifiee
 
+        self.throttle_active = True
         self.throttle_qps = initial_throttle_qps
         self.is_paused = False
 
-        self.progress: dict[str, ItemStatus.Base] = {}
+        self.dataset: dict[str, DataItem] = {}
+        self.last_gpt_time = 0.0
 
         self.prompt_and_examples = self.readPromptAndExamples()
 
@@ -104,3 +111,56 @@ class UI(App):
             yield Input(placeholder="(Optional) Explain...", id="explanation-input")
 
         yield Footer(compact=True)
+    
+    def action_label_yes(self) -> None:
+        b = self.query_one('#yes-radio', RadioButton)
+        b.value = True
+    
+    def action_label_no(self) -> None:
+        b = self.query_one('#no-radio', RadioButton)
+        b.value = True
+
+    def action_focus_explanation(self) -> None:
+        e = self.query_one('#explanation-input', Input)
+        e.focus()
+    
+    @on(Input.Submitted, '#explanation-input')
+    def focus_submit(self) -> None:
+        b = self.query_one('#submit-btn', Button)
+        b.focus()
+
+    @on(Button.Pressed, '#submit-btn')
+    def action_submit(self) -> None:
+        ...
+    
+    @on(Button.Pressed, '#ask-why-btn')
+    async def action_ask_why(self) -> None:
+        b = self.query_one('#ask-why-btn', Button)
+        b.disabled = True
+        ...
+    
+    def action_toggle_pause(self) -> None:
+        bOff = self.query_one('#off-radio', RadioButton)
+        bOn  = self.query_one( '#on-radio', RadioButton)
+        if bOff.value:
+            bOn.value = True
+        else:
+            bOff.value = True
+    
+    @on(RadioSet.Changed, '#on-off')
+    def on_toggle_gpt_switch(self) -> None:
+        self.is_paused = self.query_one('#off-radio', RadioButton).value
+    
+    def modifyThrottle(self, delta: float) -> None:
+        self.throttle_qps *= math.exp(delta * .5)
+    
+    @on(Button.Pressed, '#throttle-down-btn')
+    def action_throttle_down(self) -> None:
+        self.modifyThrottle(-1.0)
+    
+    @on(Button.Pressed, '#throttle-up-btn')
+    def action_throttle_up(self) -> None:
+        self.modifyThrottle(+1.0)
+    
+    def action_throttle_toggle(self) -> None:
+        self.throttle_active = not self.throttle_active
