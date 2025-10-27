@@ -2,7 +2,6 @@ import asyncio
 import json
 import typing as tp
 import time
-from dataclasses import dataclass
 import math
 
 from textual import on
@@ -17,11 +16,7 @@ from .shared import PromptAndExamples, Classifiee, titled, ItemStatus, QAPair
 from .stacked_bar_ascii import StackedBar
 from .histogram_ascii import Histogram
 from .arbiter_interface import ArbiterInterface
-
-@dataclass(frozen=True)
-class DataItem:
-    qaPair: QAPair
-    status: ItemStatus.Base
+from .persistent import Persistent, ItemAnnotations
 
 class UI(App):
     CSS_PATH = "styles.tcss"
@@ -43,6 +38,7 @@ class UI(App):
         prompt_and_examples_filename: str,
         all_ids: tp.Sequence[str],
         idToClassifiee: tp.Callable[[str], Classifiee],
+        rw_json_path: str,
         model_name: str = 'gpt-5-nano',
         initial_throttle_qps: float = 10.0, # queries per second
     ) -> None:
@@ -58,7 +54,8 @@ class UI(App):
         self.throttle_qps = initial_throttle_qps
         self.is_paused = False
 
-        self.dataset: dict[str, DataItem] = {}
+        self.persistent = Persistent(rw_json_path)
+        self.Context = self.persistent.Context
         self.cursor = 0
         self.last_gpt_time = 0.0
         self.arbitTask: asyncio.Task | None = None
@@ -156,23 +153,63 @@ class UI(App):
         self.is_paused = self.query_one('#off-radio', RadioButton).value
         if not self.is_paused:
             if self.arbitTask is None:
-                self.arbitTask = asyncio.create_task(self.arbit(
-                    self.all_ids[self.cursor], 
-                ))
+                self.arbitNext()
     
-    async def arbit(self, id: str, delay: float = 0.0) -> None:
-        await asyncio.sleep(delay)
+    def arbitNext(self) -> bool:
+        assert self.arbitTask is None
+        initial_cursor = self.cursor
+        while True:
+            id_ = self.all_ids[self.cursor]
+            try:
+                annotations = self.persistent.data[id_]
+            except KeyError:
+                break
+            else:
+                if annotations.human_label_no_or_yes is not None:
+                    self.persistent.data[id_] = ItemAnnotations(
+                        gpt_verdict=float(annotations.human_label_no_or_yes),
+                        status=ItemStatus.Classified(),
+                        human_label_no_or_yes=annotations.human_label_no_or_yes,
+                    )
+                if annotations.status != ItemStatus.Classified():
+                    break
+            self.cursor += 1
+            self.cursor %= len(self.all_ids)
+            if self.cursor == initial_cursor:
+                self.onAllFinished()
+                return False
+        self.arbitTask = asyncio.create_task(self.arbit(
+            id_,
+            birthline = self.last_gpt_time + 1.0 / self.throttle_qps,
+        ))
+        return True
+
+    async def arbit(self, id_: str, birthline: float) -> None:
+        dt = birthline - time.time()
+        if dt > 0.0:
+            await asyncio.sleep(dt)
         self.last_gpt_time = time.time()
         result = await self.arbiter.judge(
             model=self.model_name, 
             prompt=self.prompt_and_examples.render(
-                self.idToClassifiee(id),
+                self.idToClassifiee(id_),
             ),
             max_tokens=1,
         )
+        self.persistent.data[id_] = ItemAnnotations(
+            gpt_verdict=result,
+            status=ItemStatus.Classified(),
+            human_label_no_or_yes=None,
+        )
+        self.cursor += 1
+        self.cursor %= len(self.all_ids)
         self.arbitTask = None
-        # todo apply result
-        # todo initiate next arbit considering pause and throttle
+        if self.is_paused:
+            return
+        self.arbitNext()
+    
+    def onAllFinished(self) -> None:
+        ...
     
     def modifyThrottle(self, delta: float) -> None:
         self.throttle_qps *= math.exp(delta * .5)
