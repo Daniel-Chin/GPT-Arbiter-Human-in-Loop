@@ -6,7 +6,7 @@ import time
 import math
 
 from textual import on
-# from textual.reactive import reactive
+from textual.reactive import reactive
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Grid
@@ -35,8 +35,8 @@ class UI(App):
         Binding("t", "throttle_toggle", "Toggle Throttle."),
     ]
 
-    # throttle_active: reactive[bool] = reactive(True)
-    # throttle_qps: reactive[float] = reactive(10.0)
+    throttle_active: reactive[bool] = reactive(True)
+    throttle_qps: reactive[float] = reactive(10.0)
 
     def __init__(
         self, 
@@ -103,9 +103,12 @@ class UI(App):
         with Grid(id="upper-pane"):
             yield titled(Static("$ 0.01", id="cost-display"), 'Cost')
             with titled(Horizontal(id='throttle-pane'), 'Throttle'):
-                yield Button("-", id="throttle-down-btn")
-                yield Static("10 / sec"  , classes='padding-h-1 auto-width', id="throttle-display")
-                yield Button("+", id="throttle-up-btn")
+                with ContentSwitcher(id="throttle-controls", initial="throttle-active"):
+                    with Horizontal(id="throttle-active"):
+                        yield Button("-", id="throttle-down-btn")
+                        yield Static("10 / sec"  , classes='padding-h-1 auto-width', id="throttle-display")
+                        yield Button("+", id="throttle-up-btn")
+                    yield Static("Inactive.", classes='padding-h-1 auto-width', id="throttle-inactive")
                 yield Button("Engage", id="throttle-toggle-btn")
             yield titled(Static("GPT-5-mini", id="model-name"), 'Model')
             with titled(Container(id='progress-box'), 'Progress', skip_bottom=False):
@@ -295,7 +298,10 @@ class UI(App):
                 return False
         self.arbitTask = asyncio.create_task(self.arbit(
             id_,
-            birthline = self.last_gpt_time + 1.0 / self.throttle_qps,
+            birthline = (
+                self.last_gpt_time + 1.0 / self.throttle_qps
+                if self.throttle_active else 0.0
+            ),
         ))
         return True
 
@@ -338,8 +344,32 @@ class UI(App):
     def action_throttle_up(self) -> None:
         self.modifyThrottle(+1.0)
     
+    @on(Button.Pressed, '#throttle-toggle-btn')
     def action_throttle_toggle(self) -> None:
         self.throttle_active = not self.throttle_active
+    
+    def watch_throttle_active(self, _, __) -> None:
+        self.updateThrottleDisplay()
+    
+    def watch_throttle_qps(self, _, __) -> None:
+        self.updateThrottleDisplay()
+    
+    def updateThrottleDisplay(self) -> None:
+        switcher: ContentSwitcher = self.query_one('#throttle-controls', ContentSwitcher)
+        switcher.current = (
+            'throttle-active' if self.throttle_active else 
+            'throttle-inactive'
+        )
+        display: Static = self.query_one('#throttle-display', Static)
+        display.update(
+            f'{round(self.throttle_qps)} / sec' if self.throttle_qps >= 1.0 else
+            f'1 / {round(1 / self.throttle_qps)} sec'
+        )
+        button: Button = self.query_one('#throttle-toggle-btn', Button)
+        button.label = (
+            'Disengage' if self.throttle_active else 
+            'Engage'
+        )
     
     def on_mount(self) -> None:
         asyncio.create_task(asyncio.to_thread(self.nextQuery))
