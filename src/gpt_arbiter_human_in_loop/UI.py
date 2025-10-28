@@ -331,7 +331,7 @@ class UI(App):
         self.arbitNext()
     
     def onAllFinished(self) -> None:
-        ...
+        self.exit(message='All items have been classified.')
     
     def modifyThrottle(self, delta: float) -> None:
         self.throttle_qps *= math.exp(delta * .5)
