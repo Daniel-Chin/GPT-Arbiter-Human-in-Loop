@@ -5,7 +5,7 @@ import time
 import math
 
 from textual import on
-from textual.reactive import reactive
+# from textual.reactive import reactive
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Grid
@@ -170,12 +170,12 @@ class UI(App):
             return
         explainInput: Input = self.query_one('#explanation-input', Input)
         explanation = explainInput.value.strip() or None
-        old = self.persistent.data[self.querying_id]
-        self.persistent.data[self.querying_id] = ItemAnnotations(
+        old = self.persistent.get(self.querying_id)
+        self.persistent.set(self.querying_id, ItemAnnotations(
             gpt_verdict=old.gpt_verdict,
             status=ItemStatus.Classified(),
             human_label_no_or_yes=label,
-        )
+        ))
         self.prompt_and_examples = self.prompt_and_examples.addExample(
             QAPair(
                 question = self.idToClassifiee(self.querying_id),
@@ -196,7 +196,7 @@ class UI(App):
     
     def nextQuery(self) -> None:
         def score(id_: str) -> float:
-            anno = self.persistent.data[id_]
+            anno = self.persistent.get(id_)
             if anno.human_label_no_or_yes is not None:
                 return -1.0
             match anno.status:
@@ -209,6 +209,7 @@ class UI(App):
                 case _:
                     raise ValueError(f'Unknown ItemStatus: {anno.status}')
             p = anno.gpt_verdict
+            assert p is not None
             H2 = -p * math.log2(p) - (1 - p) * math.log2(
                 1 - p
             ) if 0.0 < p < 1.0 else 0.0
@@ -239,25 +240,22 @@ class UI(App):
         if self.query_one('#on-radio', RadioButton).value:
             if self.arbitTask is None:
                 self.arbitNext()
+                self.myUpdate()
     
     def arbitNext(self) -> bool:
         assert self.arbitTask is None
         initial_cursor = self.cursor
         while True:
             id_ = self.all_ids[self.cursor]
-            try:
-                annotations = self.persistent.data[id_]
-            except KeyError:
+            annotations = self.persistent.get(id_)
+            if annotations.human_label_no_or_yes is not None:
+                self.persistent.set(id_, ItemAnnotations(
+                    gpt_verdict=float(annotations.human_label_no_or_yes),
+                    status=ItemStatus.Classified(),
+                    human_label_no_or_yes=annotations.human_label_no_or_yes,
+                ))
+            if annotations.status != ItemStatus.Classified():
                 break
-            else:
-                if annotations.human_label_no_or_yes is not None:
-                    self.persistent.data[id_] = ItemAnnotations(
-                        gpt_verdict=float(annotations.human_label_no_or_yes),
-                        status=ItemStatus.Classified(),
-                        human_label_no_or_yes=annotations.human_label_no_or_yes,
-                    )
-                if annotations.status != ItemStatus.Classified():
-                    break
             self.cursor += 1
             self.cursor %= len(self.all_ids)
             if self.cursor == initial_cursor:
@@ -281,11 +279,11 @@ class UI(App):
             ),
             max_tokens=1,
         )
-        self.persistent.data[id_] = ItemAnnotations(
+        self.persistent.set(id_, ItemAnnotations(
             gpt_verdict=result,
             status=ItemStatus.Classified(),
             human_label_no_or_yes=None,
-        )
+        ))
         self.cursor += 1
         self.cursor %= len(self.all_ids)
         self.arbitTask = None
@@ -312,6 +310,7 @@ class UI(App):
         self.throttle_active = not self.throttle_active
     
     def on_mount(self) -> None:
+        asyncio.create_task(asyncio.to_thread(self.nextQuery))
         self.myUpdate()
     
     def myUpdate(self) -> None:
@@ -332,7 +331,8 @@ class UI(App):
             sQueryQuestion.update(self.prompt_and_examples.render(
                 classifiee, omit_examples=True, 
             ))
-            anno = self.persistent.data[self.querying_id]
+            anno = self.persistent.get(self.querying_id)
+            assert anno.gpt_verdict is not None
             sNo:  Static = self.query_one('#gpt-no-response',  Static)
             sYes: Static = self.query_one('#gpt-yes-response', Static)
             sNo.update(
@@ -351,6 +351,23 @@ class UI(App):
             sWhyYes: Static = self.query_one('#gpt-why-yes', Static)
             sWhyNo.update(self.gpt_reasons[0])
             sWhyYes.update(self.gpt_reasons[1])
-        # todo: two graphs
         sCost: Static = self.query_one('#cost-display', Static)
         sCost.update(f'$ {self.arbiter.getRunningCost():.2f}')
+        stackedBar: StackedBar = self.query_one('#stacked-bar', StackedBar)
+        stackedBar.data = ''.join(
+            self.persistent.get(id_).status.getSymbol()
+            for id_ in self.all_ids
+        )
+        stackedBar.data_cursor = self.cursor
+        histogram: Histogram = self.query_one('#decisions-histogram', Histogram)
+        new_data = []
+        for id_ in self.all_ids:
+            anno = self.persistent.get(id_)
+            if anno.status == ItemStatus.Unvisited():
+                continue
+            if anno.human_label_no_or_yes is not None:
+                continue
+            p = anno.gpt_verdict
+            assert p is not None
+            new_data.append(p)
+        histogram.data = new_data

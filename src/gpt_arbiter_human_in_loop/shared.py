@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, ConfigDict
 from textual.widget import Widget
@@ -64,15 +64,26 @@ def titled(
     w.styles.padding = padding
     return w
 
-class ItemStatus(ABC):
+class ItemStatus:
     class Base(ABC):
-        pass
+        @abstractmethod
+        def getSymbol(self) -> str:
+            raise NotImplementedError()
+    
     @dataclass(frozen=True)
     class Unvisited(Base):
-        pass
+        def getSymbol(self) -> str:
+            return '-'
+    
     @dataclass(frozen=True)
     class Classified(Base):
-        pass
+        def getSymbol(self) -> str:
+            return '0'
+    
     @dataclass(frozen=True)
     class Outdated(Base):
         value: int
+        def getSymbol(self) -> str:
+            if self.value < 10:
+                return str(self.value)
+            return '+'
