@@ -37,10 +37,15 @@ class PromptAndExamples(BaseModel):
         frozen=True,
     )
 
-    def render(self, classifiee: Classifiee) -> str:
-        return self.prompt.replace('{EXAMPLES}', '\n\n'.join(
-            ex.render() for ex in self.examples
-        )).replace('{CLASSIFIEE}', classifiee)
+    def render(
+        self, classifiee: Classifiee, omit_examples: bool = False, 
+    ) -> str:
+        p = self.prompt.replace('{CLASSIFIEE}', classifiee)
+        if not omit_examples:
+            p = p.replace('{EXAMPLES}', '\n\n'.join(
+                ex.render() for ex in self.examples
+            ))
+        return p
     
     def addExample(self, example: QAPair) -> PromptAndExamples:
         return PromptAndExamples(

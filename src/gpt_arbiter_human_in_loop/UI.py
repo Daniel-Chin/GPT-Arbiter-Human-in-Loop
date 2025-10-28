@@ -10,7 +10,8 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Grid
 from textual.widgets import (
-    Button, Footer, Header, Input, RadioButton, RadioSet, Static, 
+    Button, Footer, Header, Input, RadioButton, RadioSet, 
+    Static, ContentSwitcher, 
 )
 
 from .shared import PromptAndExamples, Classifiee, titled, ItemStatus, QAPair
@@ -33,8 +34,8 @@ class UI(App):
         Binding("t", "throttle_toggle", "Toggle Throttle."),
     ]
 
-    throttle_active: reactive[bool] = reactive(True)
-    throttle_qps: reactive[float] = reactive(10.0)
+    # throttle_active: reactive[bool] = reactive(True)
+    # throttle_qps: reactive[float] = reactive(10.0)
 
     def __init__(
         self, 
@@ -43,19 +44,29 @@ class UI(App):
         all_ids: tp.Sequence[str],
         idToClassifiee: tp.Callable[[str], Classifiee],
         rw_json_path: str,
+        Lambda: float, 
         model_name: str = 'gpt-5-nano',
         initial_throttle_qps: float = 10.0, # queries per second
     ) -> None:
+        '''
+        `Lambda`: data diversity hyperparam.  
+        Its inverse, `1 / Lambda`, equals the probability that 
+        two independently drawn data points are significantly 
+        related.  
+        '''
         super().__init__()
 
         self.arbiter = arbiter
         self.prompt_and_examples_filename = prompt_and_examples_filename
         self.all_ids = all_ids
         self.idToClassifiee = idToClassifiee
+        self.Lambda = Lambda
         self.model_name = model_name
 
         self.throttle_active = True
         self.throttle_qps = initial_throttle_qps
+        self.querying_id: str | None = None
+        self.gpt_reasons: tuple[str, str] | None = None
 
         self.persistent = Persistent(rw_json_path)
         self.Context = self.persistent.Context
@@ -71,6 +82,14 @@ class UI(App):
         with open(self.prompt_and_examples_filename, 'r') as f:
             j = json.load(f)
             return PromptAndExamples.model_validate(j)
+
+    def writePromptAndExamples(self) -> None:
+        with open(self.prompt_and_examples_filename, 'w') as f:
+            json.dump(
+                self.prompt_and_examples.model_dump(),
+                f,
+                indent=2,
+            )
     
     def compose(self) -> ComposeResult:
         # Header
@@ -94,18 +113,24 @@ class UI(App):
             ), 'Decisions and Confidence', skip_bottom=False)
         
         # Query section
-        with Container(id="query-section"):
-            yield Static("The GPT arbiter is entrusting you with the following decision!", id="greeter", classes='auto-width margin-h-1')
-            yield Static("ID: ...", id="query-id", classes='auto-width margin-h-1')
-            yield Static("", id="query-question", classes='auto-width margin-h-1')
-            
-            # GPT responses
-            with Horizontal(id="gpt-inspection"):
-                with Container(id="gpt-responses", classes='auto-width margin-h-1'):
-                    yield Static('GPT said "No" (1%).', classes='auto-width', id="gpt-no-response")
-                    yield Static('GPT said "Yes" (99%).', classes='auto-width', id="gpt-yes-response")
-                yield Button("Ask GPT\nwhy", id="ask-why-btn")
-            
+        with ContentSwitcher(id="query-switcher", initial="query-empty"):
+            yield Static('', id="query-empty")
+            with Container(id="query-section"):
+                yield Static("The GPT arbiter is entrusting you with the following decision!", id="greeter", classes='auto-width margin-h-1')
+                yield Static("ID: ...", id="query-id", classes='auto-width margin-h-1')
+                yield Static("", id="query-question", classes='auto-width margin-h-1')
+                
+                # GPT responses
+                with Horizontal(id="gpt-inspection"):
+                    with Container(id="gpt-responses", classes='auto-width margin-h-1'):
+                        yield Static('GPT said "No" (1%).', classes='auto-width', id="gpt-no-response")
+                        yield Static('GPT said "Yes" (99%).', classes='auto-width', id="gpt-yes-response")
+                    with ContentSwitcher(id="gpt-why-switcher", initial="ask-why-btn"):
+                        yield Button("Ask GPT\nwhy", id="ask-why-btn")
+                        with Container(id="gpt-why-response", classes='auto-width margin-h-1'):
+                            yield Static("...", id="gpt-why-no",  classes='auto-width')
+                            yield Static("...", id="gpt-why-yes", classes='auto-width')
+        
         # Human input section
         with titled(Grid(id="human-input"), 'What do you think?', skip_bottom=False):
             yield Button("Submit", id="submit-btn")
@@ -137,7 +162,63 @@ class UI(App):
 
     @on(Button.Pressed, '#submit-btn')
     def action_submit(self) -> None:
-        ...
+        if self.querying_id is None:
+            return
+        yesNo: RadioSet = self.query_one('#yes-no', RadioSet)
+        label = yesNo.pressed_index
+        if label == -1:
+            return
+        explainInput: Input = self.query_one('#explanation-input', Input)
+        explanation = explainInput.value.strip() or None
+        old = self.persistent.data[self.querying_id]
+        self.persistent.data[self.querying_id] = ItemAnnotations(
+            gpt_verdict=old.gpt_verdict,
+            status=ItemStatus.Classified(),
+            human_label_no_or_yes=label,
+        )
+        self.prompt_and_examples = self.prompt_and_examples.addExample(
+            QAPair(
+                question = self.idToClassifiee(self.querying_id),
+                no_or_yes = label,
+                explanation = explanation,
+            )
+        )
+        self.writePromptAndExamples()
+        self.querying_id = None
+        self.gpt_reasons = None
+        bYes = self.query_one('#yes-radio', RadioButton)
+        bNo  = self.query_one('#no-radio',  RadioButton)
+        bYes.value = False
+        bNo.value  = False
+        explainInput.value = ''
+        self.myUpdate()
+        asyncio.create_task(asyncio.to_thread(self.nextQuery))
+    
+    def nextQuery(self) -> None:
+        def score(id_: str) -> float:
+            anno = self.persistent.data[id_]
+            if anno.human_label_no_or_yes is not None:
+                return -1.0
+            match anno.status:
+                case ItemStatus.Unvisited():
+                    return -1.0
+                case ItemStatus.Classified():
+                    k = 0
+                case ItemStatus.Outdated(value=k):
+                    pass
+                case _:
+                    raise ValueError(f'Unknown ItemStatus: {anno.status}')
+            p = anno.gpt_verdict
+            H2 = -p * math.log2(p) - (1 - p) * math.log2(
+                1 - p
+            ) if 0.0 < p < 1.0 else 0.0
+            return H2 * (1 - 1 / self.Lambda) ** k
+        
+        best_id = max(self.all_ids, key=score)
+        if score(best_id) <= 0.0:
+            time.sleep(1.0)
+            return self.nextQuery()
+        self.querying_id = best_id
     
     @on(Button.Pressed, '#ask-why-btn')
     async def action_ask_why(self) -> None:
@@ -234,7 +315,40 @@ class UI(App):
         self.myUpdate()
     
     def myUpdate(self) -> None:
+        yesNo: RadioSet = self.query_one('#yes-no', RadioSet)
         self.query_one('#submit-btn', Button).disabled = (
-            self.query_one('#yes-radio', RadioButton).value is False and
-            self.query_one('#no-radio', RadioButton).value is False
+            yesNo.pressed_index == -1
         )
+        switcherQuery: ContentSwitcher = self.query_one('#query-switcher', ContentSwitcher)
+        switcherQuery.current = (
+            'query-empty' if self.querying_id is None else 
+            'query-section'
+        )
+        if self.querying_id is not None:
+            sQueryID: Static = self.query_one('#query-id', Static)
+            sQueryID.update(f'ID: {self.querying_id}')
+            classifiee = self.idToClassifiee(self.querying_id)
+            sQueryQuestion: Static = self.query_one('#query-question', Static)
+            sQueryQuestion.update(self.prompt_and_examples.render(
+                classifiee, omit_examples=True, 
+            ))
+            anno = self.persistent.data[self.querying_id]
+            sNo:  Static = self.query_one('#gpt-no-response',  Static)
+            sYes: Static = self.query_one('#gpt-yes-response', Static)
+            sNo.update(
+                f'GPT said "No" ({1 - anno.gpt_verdict:.1%}).'
+            )
+            sYes.update(
+                f'GPT said "Yes" ({anno.gpt_verdict:.1%}).'
+            )
+        switcherWhy: ContentSwitcher = self.query_one('#gpt-why-switcher', ContentSwitcher)
+        switcherWhy.current = (
+            'ask-why-btn' if self.gpt_reasons is None else 
+            'gpt-why-response'
+        )
+        if self.gpt_reasons is not None:
+            sWhyNo:  Static = self.query_one('#gpt-why-no',  Static)
+            sWhyYes: Static = self.query_one('#gpt-why-yes', Static)
+            sWhyNo.update(self.gpt_reasons[0])
+            sWhyYes.update(self.gpt_reasons[1])
+        # todo: two graphs
