@@ -1,3 +1,4 @@
+import typing as tp
 import random
 import asyncio
 
@@ -11,5 +12,14 @@ class ArbiterDummy(ArbiterInterface):
         await asyncio.sleep(0.5)
         return random.random()
     
+    async def interrogate(
+        self, model: str, prompt: str, 
+        callbackNo:  tp.Callable[[str], None],
+        callbackYes: tp.Callable[[str], None],
+        max_tokens: int,
+        question: str,
+    ) -> None:
+        callbackYes("Because I said so.")
+
     def getRunningCost(self) -> float:
         return 0.0

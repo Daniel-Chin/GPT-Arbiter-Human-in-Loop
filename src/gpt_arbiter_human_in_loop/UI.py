@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import json
 import typing as tp
 import time
@@ -47,6 +48,8 @@ class UI(App):
         Lambda: float, 
         model_name: str = 'gpt-5-nano',
         initial_throttle_qps: float = 10.0, # queries per second
+        interrogate_question: str = 'Explain briefly (1 - 3 sentences, usually 1 short sentence) why you made that decision.',
+        interrogate_max_tokens: int = 60,
     ) -> None:
         '''
         `Lambda`: data diversity hyperparam.  
@@ -62,11 +65,13 @@ class UI(App):
         self.idToClassifiee = idToClassifiee
         self.Lambda = Lambda
         self.model_name = model_name
+        self.interrogate_question = interrogate_question
+        self.interrogate_max_tokens = interrogate_max_tokens
 
         self.throttle_active = True
         self.throttle_qps = initial_throttle_qps
         self.querying_id: str | None = None
-        self.gpt_reasons: tuple[str, str] | None = None
+        self.gpt_reasons: list[str] | None = None
 
         self.persistent = Persistent(rw_json_path)
         self.Context = self.persistent.Context
@@ -117,7 +122,7 @@ class UI(App):
             yield Static('', id="query-empty")
             with Container(id="query-section"):
                 yield Static("The GPT arbiter is entrusting you with the following decision!", id="greeter", classes='auto-width margin-h-1')
-                yield Static("ID: ...", id="query-id", classes='auto-width margin-h-1')
+                yield Static("ID: banana", id="query-id", classes='auto-width margin-h-1')
                 yield Static("", id="query-question", classes='auto-width margin-h-1')
                 
                 # GPT responses
@@ -128,8 +133,8 @@ class UI(App):
                     with ContentSwitcher(id="gpt-why-switcher", initial="ask-why-btn"):
                         yield Button("Ask GPT\nwhy", id="ask-why-btn")
                         with Container(id="gpt-why-response", classes='auto-width margin-h-1'):
-                            yield Static("...", id="gpt-why-no",  classes='auto-width')
-                            yield Static("...", id="gpt-why-yes", classes='auto-width')
+                            yield Static("who knows", id="gpt-why-no",  classes='auto-width')
+                            yield Static("who knows", id="gpt-why-yes", classes='auto-width')
         
         # Human input section
         with titled(Grid(id="human-input"), 'What do you think?', skip_bottom=False):
@@ -223,9 +228,36 @@ class UI(App):
     
     @on(Button.Pressed, '#ask-why-btn')
     async def action_ask_why(self) -> None:
-        b = self.query_one('#ask-why-btn', Button)
-        b.disabled = True
-        ...
+        if self.querying_id is None:
+            return
+        if self.gpt_reasons is not None:
+            return
+        switcher: ContentSwitcher = self.query_one('#gpt-why-switcher', ContentSwitcher)
+        switcher.current = 'gpt-why-response'
+        sWhyNo:  Static = self.query_one('#gpt-why-no',  Static)
+        sWhyYes: Static = self.query_one('#gpt-why-yes', Static)
+        sWhyNo .update('')
+        sWhyYes.update('')
+        querying_id = self.querying_id
+        statics = (sWhyNo, sWhyYes)
+        def append(index_: int, chunk: str) -> None:
+            if self.querying_id != querying_id:
+                return
+            if self.gpt_reasons is None:
+                self.gpt_reasons = ['', '']
+            self.gpt_reasons[index_] += chunk
+            statics[index_].update(self.gpt_reasons[index_])
+        
+        await self.arbiter.interrogate(
+            model=self.model_name, 
+            prompt=self.prompt_and_examples.render(
+                self.idToClassifiee(querying_id),
+            ),
+            callbackNo =functools.partial(append, 0),
+            callbackYes=functools.partial(append, 1),
+            max_tokens=self.interrogate_max_tokens,
+            question=self.interrogate_question,
+        )
     
     def action_toggle_pause(self) -> None:
         bOff = self.query_one('#off-radio', RadioButton)

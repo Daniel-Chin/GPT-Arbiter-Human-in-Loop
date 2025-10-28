@@ -1,3 +1,4 @@
+import typing as tp
 from abc import ABC, abstractmethod
 
 class ArbiterInterface(ABC):
@@ -9,6 +10,16 @@ class ArbiterInterface(ABC):
         '''
         `max_tokens` can be larger if you want to debug by knowing what it wants to say.
         '''
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def interrogate(
+        self, model: str, prompt: str, 
+        callbackNo:  tp.Callable[[str], None],
+        callbackYes: tp.Callable[[str], None],
+        max_tokens: int,
+        question: str,
+    ) -> None:
         raise NotImplementedError
     
     @abstractmethod

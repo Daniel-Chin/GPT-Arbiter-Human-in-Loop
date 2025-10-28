@@ -1,8 +1,16 @@
+import asyncio
 from datetime import timedelta
+import typing as tp
 
 import numpy as np
 from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletionUserMessageParam, ChatCompletion
+from openai.types.chat import (
+    ChatCompletionUserMessageParam, 
+    ChatCompletionAssistantMessageParam,
+    ChatCompletion, ChatCompletionChunk, 
+    ChatCompletionStreamOptionsParam,
+)
+# from openai._s
 from cachier import cachier
 
 from .shared import NO_OR_YES
@@ -63,6 +71,52 @@ class ArbiterGPT(ArbiterInterface):
             print(f'{c[0].top_logprobs = }')
             assert False
         return yes / (yes + no)
+
+    async def interrogate(
+        self, model: str, prompt: str, 
+        callbackNo:  tp.Callable[[str], None],
+        callbackYes: tp.Callable[[str], None],
+        max_tokens: int,
+        question: str,
+    ) -> None:
+        async def f(decision: str, callback: tp.Callable[[str], None]) -> None:
+            history = [
+                ChatCompletionUserMessageParam(
+                    content=prompt, 
+                    role='user', 
+                ),
+                ChatCompletionAssistantMessageParam(
+                    content=decision,
+                    role='assistant',
+                ),
+                ChatCompletionUserMessageParam(
+                    content=question, 
+                    role='user', 
+                ),
+            ]
+            async for chunk in await self.client.chat.completions.create(
+                model=model, 
+                messages=history, 
+                max_tokens=max_tokens,
+                temperature=1,
+                stream=True,
+                stream_options=ChatCompletionStreamOptionsParam(
+                    include_usage=True,
+                ),
+            ):
+                assert isinstance(chunk, ChatCompletionChunk)
+                self.running_cost += PRICING[model].estimate(
+                    chunk.usage, # empty except last
+                )
+                choice = chunk.choices[0]
+                callback(choice.delta.content or '')
+        
+        await asyncio.gather(*[
+            f(decision, callback) for decision, callback in zip(NO_OR_YES, (
+                callbackNo, 
+                callbackYes, 
+            ))
+        ])
 
     def getRunningCost(self) -> float:
         return self.running_cost
