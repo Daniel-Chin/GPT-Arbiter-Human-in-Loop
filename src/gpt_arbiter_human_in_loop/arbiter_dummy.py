@@ -10,3 +10,6 @@ class ArbiterDummy(ArbiterInterface):
     ) -> float:
         await asyncio.sleep(0.5)
         return random.random()
+    
+    def getRunningCost(self) -> float:
+        return 0.0

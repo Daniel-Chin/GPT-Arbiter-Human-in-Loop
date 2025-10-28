@@ -10,3 +10,10 @@ class ArbiterInterface(ABC):
         `max_tokens` can be larger if you want to debug by knowing what it wants to say.
         '''
         raise NotImplementedError
+    
+    @abstractmethod
+    def getRunningCost(self) -> float:
+        '''
+        Returns the total cost incurred so far in USD.
+        '''
+        raise NotImplementedError

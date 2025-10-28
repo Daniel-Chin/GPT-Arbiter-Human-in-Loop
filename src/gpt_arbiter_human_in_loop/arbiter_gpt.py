@@ -7,6 +7,7 @@ from cachier import cachier
 
 from .shared import NO_OR_YES
 from .arbiter_interface import ArbiterInterface
+from .pricing import PRICING
 
 class ArbiterGPT(ArbiterInterface):
     def __init__(
@@ -22,6 +23,8 @@ class ArbiterGPT(ArbiterInterface):
         c = cachier(separate_files=True, stale_after=cache_stale_after)
         j = c(self.judge)
         self.judge = j   # type: ignore
+
+        self.running_cost = 0.0
     
     async def judge(
         self, model: str, prompt: str, 
@@ -43,6 +46,7 @@ class ArbiterGPT(ArbiterInterface):
             top_logprobs=5,
         )
         assert isinstance(response, ChatCompletion) # for static type
+        self.running_cost += PRICING[model].estimate(response.usage)
         choice = response.choices[0]
         lp = choice.logprobs
         assert lp is not None
@@ -59,3 +63,6 @@ class ArbiterGPT(ArbiterInterface):
             print(f'{c[0].top_logprobs = }')
             assert False
         return yes / (yes + no)
+
+    def getRunningCost(self) -> float:
+        return self.running_cost

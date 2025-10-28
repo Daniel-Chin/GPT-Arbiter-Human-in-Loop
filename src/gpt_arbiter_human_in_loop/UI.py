@@ -352,3 +352,5 @@ class UI(App):
             sWhyNo.update(self.gpt_reasons[0])
             sWhyYes.update(self.gpt_reasons[1])
         # todo: two graphs
+        sCost: Static = self.query_one('#cost-display', Static)
+        sCost.update(f'$ {self.arbiter.getRunningCost():.2f}')

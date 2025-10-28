@@ -25,6 +25,9 @@
   - Hyperparam: data diversity $\Lambda$. Its inverse, $1 / \Lambda$, equals the probability that labeling A significantly explains B, where A and B are independently drawn from the data distribution.
   - The average information gain of querying a datapoint currently classified k queries ago with probability simplex (p, 1-p) is therefore $H_2(p)(1-1/\Lambda)^k$ where binary entropy $H_2(p) = -p log_2(p) - (1-p) log_2(1-p)$
 
+## Gotchas
+- OpenAI exposes no pricing API, so the unit price may get outdated. See [pricing.py](./src/gpt_arbiter_human_in_loop/pricing.py)
+
 ## Not planned yet
 - Use ChatCompletion during the interactive stage and hand it off to BatchAPI for the automatic stage.
 - Support more-than-2-way classification.
