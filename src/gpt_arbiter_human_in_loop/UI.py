@@ -5,6 +5,8 @@ import typing as tp
 import time
 import math
 import threading
+import subprocess
+import shutil
 
 from textual import on
 from textual.pilot import Pilot
@@ -14,14 +16,26 @@ from textual.binding import Binding
 from textual.containers import Container, Horizontal, Grid
 from textual.widgets import (
     Button, Footer, Header, Input, RadioButton, RadioSet, 
-    Static, ContentSwitcher, 
+    Static, ContentSwitcher, Link,
 )
+import webbrowser
 
 from .shared import PromptAndExamples, Classifiee, titled, ItemStatus, QAPair
 from .stacked_bar_ascii import StackedBar
 from .histogram_ascii import Histogram
 from .arbiter_interface import ArbiterInterface
 from .persistent import Persistent, ItemAnnotations
+
+class LinkPrivate(Link):
+    def action_open_link(self) -> None:
+        if self.url:
+            firefox_path = shutil.which('firefox')
+            if firefox_path:
+                subprocess.Popen([
+                    firefox_path, '--private-window', self.url, 
+                ])
+            else:
+                webbrowser.open(self.url)
 
 class UI(App):
     CSS_PATH = "styles.tcss"
@@ -145,7 +159,7 @@ class UI(App):
             yield Static('', id="query-empty")
             with Container(id="query-section"):
                 yield Static("The GPT arbiter is entrusting you with the following decision!", id="greeter", classes='auto-width margin-h-1')
-                yield Static("ID: banana", id="query-id", classes='auto-width margin-h-1')
+                yield LinkPrivate("[url]", id="query-url", classes='auto-width margin-h-1')
                 yield Static("", id="query-question", classes='auto-width margin-h-1')
                 
                 # GPT responses
@@ -449,8 +463,10 @@ class UI(App):
             'query-section'
         )
         if self.querying_id is not None:
-            sQueryID: Static = self.query_one('#query-id', Static)
-            sQueryID.update(f'ID: {self.querying_id}')
+            sQueryURL: Link = self.query_one('#query-url', Link)
+            url = 'youtu.be/' + self.querying_id
+            sQueryURL.update(url)
+            sQueryURL.url = 'https://' + url
             classifiee = self.idToClassifiee(self.querying_id)
             sQueryQuestion: Static = self.query_one('#query-question', Static)
             sQueryQuestion.update(self.prompt_and_examples.render(
