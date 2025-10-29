@@ -12,6 +12,7 @@ from textual.reactive import reactive
 from textual.app import App, ComposeResult, ScreenStackError
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Grid
+from textual.widget import Widget
 from textual.widgets import (
     Button, Footer, Header, Input, RadioButton, RadioSet, 
     Static, ContentSwitcher, 
@@ -23,19 +24,26 @@ from .histogram_ascii import Histogram
 from .arbiter_interface import ArbiterInterface
 from .persistent import Persistent, ItemAnnotations
 
+GLOBAL_BINDINGS = [
+    Binding("y", "label_yes", "/"),
+    Binding("n", "label_no", "."),
+    Binding("e", "focus_explanation", "Explain."),
+    Binding("ctrl+enter", "submit", "Submit."),
+    Binding("w", "ask_why", "Why?"),
+    Binding("p", "toggle_pause", "(Un)Pause."),
+    Binding("-", "throttle_down", "/"),
+    Binding("+", "throttle_up", "Throttle."),
+    Binding("t", "throttle_toggle", "Toggle Throttle."),
+]
+
+class MyButton(Button):
+    BINDINGS = GLOBAL_BINDINGS
+
+class MyRadioSet(RadioSet):
+    BINDINGS = GLOBAL_BINDINGS
+
 class UI(App):
     CSS_PATH = "styles.tcss"
-    BINDINGS = [
-        Binding("y", "label_yes", "/"),
-        Binding("n", "label_no", "."),
-        Binding("e", "focus_explanation", "Explain."),
-        Binding("ctrl+enter", "submit", "Submit."),
-        Binding("w", "ask_why", "Why?"),
-        Binding("p", "toggle_pause", "(Un)Pause."),
-        Binding("-", "throttle_down", "/"),
-        Binding("+", "throttle_up", "Throttle."),
-        Binding("t", "throttle_toggle", "Toggle Throttle."),
-    ]
 
     throttle_active: reactive[bool] = reactive(True)
     throttle_qps: reactive[float] = reactive(10.0)
@@ -125,15 +133,15 @@ class UI(App):
             with titled(Horizontal(id='throttle-pane'), 'Throttle'):
                 with ContentSwitcher(id="throttle-controls", initial="throttle-active"):
                     with Horizontal(id="throttle-active"):
-                        yield Button("-", id="throttle-down-btn")
+                        yield MyButton("-", id="throttle-down-btn")
                         yield Static("10 / sec"  , classes='padding-h-1 auto-width', id="throttle-display")
-                        yield Button("+", id="throttle-up-btn")
+                        yield MyButton("+", id="throttle-up-btn")
                     yield Static("Inactive.", classes='padding-h-1 auto-width', id="throttle-inactive")
-                yield Button("Engage", id="throttle-toggle-btn")
+                yield MyButton("Engage", id="throttle-toggle-btn")
             with titled(Container(id='progress-box'), 'Progress', skip_bottom=False):
                 yield StackedBar('-0123456789', id='stacked-bar')
             yield titled(Static("$ 0.01", id="cost-display"), 'Cost', skip_bottom=False)
-            with titled(RadioSet(id='on-off'), 'GPT Switch', skip_bottom=False):
+            with titled(MyRadioSet(id='on-off'), 'GPT Switch', skip_bottom=False):
                 yield RadioButton("Pause", id="off-radio", value=True)
                 yield RadioButton("Judge", id="on-radio")
             yield titled(Histogram(
@@ -154,14 +162,14 @@ class UI(App):
                         yield Static('GPT said "No" (1%).', classes='auto-width', id="gpt-no-response")
                         yield Static('GPT said "Yes" (99%).', classes='auto-width', id="gpt-yes-response")
                     with ContentSwitcher(id="gpt-why-switcher", initial="ask-why-btn"):
-                        yield Button("Ask GPT\nwhy", id="ask-why-btn")
+                        yield MyButton("Ask GPT\nwhy", id="ask-why-btn")
                         with Container(id="gpt-why-response", classes='auto-width margin-h-1'):
                             yield Static("who knows", id="gpt-why-no",  classes='auto-width')
                             yield Static("who knows", id="gpt-why-yes", classes='auto-width')
         
                 # Human input section
                 with titled(Grid(id="human-input"), 'What do you think?', skip_bottom=False):
-                    yield Button("Submit", id="submit-btn")
+                    yield MyButton("Submit", id="submit-btn")
                     with RadioSet(id='yes-no'):
                         yield RadioButton("No", id="no-radio")
                         yield RadioButton("Yes", id="yes-radio")
