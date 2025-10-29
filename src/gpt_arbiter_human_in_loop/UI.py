@@ -29,7 +29,7 @@ class UI(App):
         Binding("y", "label_yes", "/"),
         Binding("n", "label_no", "."),
         Binding("e", "focus_explanation", "Explain."),
-        Binding("ctrl+enter", "submit", "Submit."),
+        Binding("ctrl+s", "submit", "Submit."),
         Binding("w", "ask_why", "Why?"),
         Binding("p", "toggle_pause", "(Un)Pause."),
         Binding("-", "throttle_down", "/"),
@@ -183,9 +183,11 @@ class UI(App):
     @on(RadioSet.Changed, '#yes-no')
     def onYesNoChanged(self) -> None:
         yesNo: RadioSet = self.query_one('#yes-no', RadioSet)
-        self.query_one('#submit-btn', Button).disabled = (
+        bSubmit: Button = self.query_one('#submit-btn', Button)
+        bSubmit.disabled = (
             yesNo.pressed_index == 1
         )
+        bSubmit.focus()
         self.query_one('#explanation-input', Input).visible = (
             yesNo.pressed_index != 1
         )
@@ -234,6 +236,7 @@ class UI(App):
     
     def maybeStartSelectQuery(self) -> None:
         assert self.selectQueryTask is None
+        assert self.querying_id is None
         self.selectQueryTask = asyncio.create_task(
             asyncio.to_thread(self.selectQuery), 
         )
@@ -263,9 +266,11 @@ class UI(App):
                 return H2 * (1 - 1 / self.Lambda) ** k
             
             best_id = max(self.all_ids, key=score)
+            # self.log(f'{score(best_id) = }')
             if score(best_id) <= 0.0:
                 return
             self.querying_id = best_id
+            self.myUpdate()
         finally:
             self.selectQueryTask = None
     
