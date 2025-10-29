@@ -43,7 +43,10 @@ class Histogram(Container):
         bin_size = range_ / W
         sparkline_data = [0] * W
         for value in new_data:
-            bin = min(int((value - data_min) / bin_size), W - 1)
+            if range_ == 0:
+                bin = W // 2
+            else:
+                bin = min(int((value - data_min) / bin_size), W - 1)
             sparkline_data[bin] += 1
         self.sparkline.data = sparkline_data
     
