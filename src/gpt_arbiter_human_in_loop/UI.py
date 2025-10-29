@@ -78,6 +78,7 @@ class UI(App):
         self.cursor = 0
         self.last_gpt_time = 0.0
         self.arbitTask: asyncio.Task | None = None
+        self.selectQueryTask: asyncio.Task | None = None
 
         self.prompt_and_examples = self.readPromptAndExamples()
 
@@ -200,34 +201,37 @@ class UI(App):
         bNo.value  = False
         explainInput.value = ''
         self.myUpdate()
-        asyncio.create_task(asyncio.to_thread(self.nextQuery))
+        assert self.selectQueryTask is None
+        self.selectQueryTask = asyncio.create_task(asyncio.to_thread(self.nextQuery))
     
     def nextQuery(self) -> None:
-        def score(id_: str) -> float:
-            anno = self.persistent.get(id_)
-            if anno.human_label_no_or_yes is not None:
-                return -1.0
-            match anno.status:
-                case ItemStatus.Unvisited():
+        try:
+            def score(id_: str) -> float:
+                anno = self.persistent.get(id_)
+                if anno.human_label_no_or_yes is not None:
                     return -1.0
-                case ItemStatus.Classified():
-                    k = 0
-                case ItemStatus.Outdated(value=k):
-                    pass
-                case _:
-                    raise ValueError(f'Unknown ItemStatus: {anno.status}')
-            p = anno.gpt_verdict
-            assert p is not None
-            H2 = -p * math.log2(p) - (1 - p) * math.log2(
-                1 - p
-            ) if 0.0 < p < 1.0 else 0.0
-            return H2 * (1 - 1 / self.Lambda) ** k
-        
-        best_id = max(self.all_ids, key=score)
-        if score(best_id) <= 0.0:
-            time.sleep(1.0)
-            return self.nextQuery()
-        self.querying_id = best_id
+                match anno.status:
+                    case ItemStatus.Unvisited():
+                        return -1.0
+                    case ItemStatus.Classified():
+                        k = 0
+                    case ItemStatus.Outdated(value=k):
+                        pass
+                    case _:
+                        raise ValueError(f'Unknown ItemStatus: {anno.status}')
+                p = anno.gpt_verdict
+                assert p is not None
+                H2 = -p * math.log2(p) - (1 - p) * math.log2(
+                    1 - p
+                ) if 0.0 < p < 1.0 else 0.0
+                return H2 * (1 - 1 / self.Lambda) ** k
+            
+            best_id = max(self.all_ids, key=score)
+            if score(best_id) <= 0.0:
+                return
+            self.querying_id = best_id
+        finally:
+            self.selectQueryTask = None
     
     @on(Button.Pressed, '#ask-why-btn')
     async def action_ask_why(self) -> None:
@@ -329,6 +333,10 @@ class UI(App):
         if self.query_one('#off-radio', RadioButton).value:
             return
         self.arbitNext()
+        if self.selectQueryTask is None and self.querying_id is None:
+            self.selectQueryTask = asyncio.create_task(
+                asyncio.to_thread(self.nextQuery), 
+            )
     
     def onAllFinished(self) -> None:
         self.exit(message='All items have been classified.')
@@ -355,6 +363,8 @@ class UI(App):
         self.updateThrottleDisplay()
     
     def updateThrottleDisplay(self) -> None:
+        if not self.is_on_screen:
+            return
         switcher: ContentSwitcher = self.query_one('#throttle-controls', ContentSwitcher)
         switcher.current = (
             'throttle-active' if self.throttle_active else 
@@ -372,8 +382,9 @@ class UI(App):
         )
     
     def on_mount(self) -> None:
-        asyncio.create_task(asyncio.to_thread(self.nextQuery))
+        self.selectQueryTask = asyncio.create_task(asyncio.to_thread(self.nextQuery))
         self.myUpdate()
+        self.updateThrottleDisplay()
     
     def myUpdate(self) -> None:
         yesNo: RadioSet = self.query_one('#yes-no', RadioSet)

@@ -65,20 +65,31 @@ def titled(
     return w
 
 class ItemStatus:
+    Primitive = tuple[str, dict]
+
     class Base(ABC):
         @abstractmethod
         def getSymbol(self) -> str:
+            raise NotImplementedError()
+        
+        def serialize(self) -> ItemStatus.Primitive:
             raise NotImplementedError()
     
     @dataclass(frozen=True)
     class Unvisited(Base):
         def getSymbol(self) -> str:
             return '-'
+        
+        def serialize(self) -> ItemStatus.Primitive:
+            return ('Unvisited', {})
     
     @dataclass(frozen=True)
     class Classified(Base):
         def getSymbol(self) -> str:
             return '0'
+
+        def serialize(self) -> ItemStatus.Primitive:
+            return ('Classified', {})
     
     @dataclass(frozen=True)
     class Outdated(Base):
@@ -87,3 +98,19 @@ class ItemStatus:
             if self.value < 10:
                 return str(self.value)
             return '+'
+        
+        def serialize(self) -> ItemStatus.Primitive:
+            return ('Outdated', {'value': self.value})
+    
+    @classmethod
+    def deserialize(cls, prim: ItemStatus.Primitive) -> ItemStatus.Base:
+        tag, data = prim
+        match tag:
+            case 'Unvisited':
+                return ItemStatus.Unvisited()
+            case 'Classified':
+                return ItemStatus.Classified()
+            case 'Outdated':
+                return ItemStatus.Outdated(**data)
+            case _:
+                raise ValueError(f'Unknown ItemStatus tag: {tag}')

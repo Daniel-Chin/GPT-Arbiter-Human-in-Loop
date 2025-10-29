@@ -43,6 +43,6 @@ class StackedBar(Widget):
             else:
                 s = self.symbols[winner]
                 if is_cursor:
-                    s = f'[b]{s}[/b]'
+                    s = f'[on white][black]{s}[/][/]'
                 buf.append(s)
         return ''.join(buf)

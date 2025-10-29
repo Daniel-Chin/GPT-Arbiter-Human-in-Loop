@@ -4,7 +4,7 @@ import json
 import typing as tp
 from contextlib import contextmanager
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 
 from .shared import ItemStatus
 
@@ -15,7 +15,19 @@ class ItemAnnotations(BaseModel):
 
     model_config = ConfigDict(
         frozen=True,
+        arbitrary_types_allowed=True,
     )
+
+    @field_serializer('status')
+    def serialize_status(self, status: ItemStatus.Base) -> ItemStatus.Primitive:
+        return status.serialize()
+
+    @field_validator('status', mode='before')
+    @classmethod
+    def validate_status(cls, v: tp.Any) -> ItemStatus.Base:
+        if isinstance(v, ItemStatus.Base):
+            return v
+        return ItemStatus.deserialize(v)
 
     @classmethod
     def Unvisited(cls) -> ItemAnnotations:
