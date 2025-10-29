@@ -301,7 +301,7 @@ class UI(App):
                 return
             if self.gpt_reasons is None:
                 self.gpt_reasons = ['', '']
-            self.gpt_reasons[index_] += chunk
+            self.gpt_reasons[index_] += chunk.replace('\n', ' ')
             statics[index_].update(self.gpt_reasons[index_])
         
         await self.arbiter.interrogate(
