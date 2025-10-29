@@ -164,6 +164,7 @@ class UI(App):
                     yield Button("Submit", id="submit-btn")
                     with RadioSet(id='yes-no'):
                         yield RadioButton("No", id="no-radio")
+                        yield RadioButton("", id="undecided-radio", value=True)
                         yield RadioButton("Yes", id="yes-radio")
                     yield Input(placeholder="(Optional) Explain...", id="explanation-input")
 
@@ -172,12 +173,22 @@ class UI(App):
     def action_label_yes(self) -> None:
         b = self.query_one('#yes-radio', RadioButton)
         b.value = True
-        self.myUpdate()
+        self.onYesNoChanged()
     
     def action_label_no(self) -> None:
         b = self.query_one('#no-radio', RadioButton)
         b.value = True
-        self.myUpdate()
+        self.onYesNoChanged()
+    
+    @on(RadioSet.Changed, '#yes-no')
+    def onYesNoChanged(self) -> None:
+        yesNo: RadioSet = self.query_one('#yes-no', RadioSet)
+        self.query_one('#submit-btn', Button).disabled = (
+            yesNo.pressed_index == 1
+        )
+        self.query_one('#explanation-input', Input).visible = (
+            yesNo.pressed_index != 1
+        )
 
     def action_focus_explanation(self) -> None:
         e = self.query_one('#explanation-input', Input)
@@ -194,8 +205,9 @@ class UI(App):
             return
         yesNo: RadioSet = self.query_one('#yes-no', RadioSet)
         label = yesNo.pressed_index
-        if label == -1:
+        if label == 1:
             return
+        label //= 2
         explainInput: Input = self.query_one('#explanation-input', Input)
         explanation = explainInput.value.strip() or None
         old = self.persistent.get(self.querying_id)
@@ -214,10 +226,8 @@ class UI(App):
         self.writePromptAndExamples()
         self.querying_id = None
         self.gpt_reasons = None
-        bYes = self.query_one('#yes-radio', RadioButton)
-        bNo  = self.query_one('#no-radio',  RadioButton)
-        bYes.value = False
-        bNo.value  = False
+        bUndecided = self.query_one('#undecided-radio', RadioButton)
+        bUndecided.toggle()
         explainInput.value = ''
         self.myUpdate()
         self.maybeStartSelectQuery()
@@ -419,10 +429,7 @@ class UI(App):
         onOff.focus()
     
     def myUpdate(self) -> None:
-        yesNo: RadioSet = self.query_one('#yes-no', RadioSet)
-        self.query_one('#submit-btn', Button).disabled = (
-            yesNo.pressed_index == -1
-        )
+        self.onYesNoChanged()
         switcherQuery: ContentSwitcher = self.query_one('#query-switcher', ContentSwitcher)
         switcherQuery.current = (
             'query-empty' if self.querying_id is None else 
