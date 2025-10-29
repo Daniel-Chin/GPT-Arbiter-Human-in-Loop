@@ -20,14 +20,15 @@ class QAPair(BaseModel):
 
     def render(self) -> str:
         s = f'''
-Query:
+<query>
 {self.question}
-Reference:
+</query>
+<reference>
 {NO_OR_YES[self.no_or_yes]}
 '''.strip()
         if self.explanation is not None:
             s += f', because:\n{self.explanation}'
-        return s
+        return s + '\n</reference>'
 
 class PromptAndExamples(BaseModel):
     prompt: str
@@ -40,7 +41,7 @@ class PromptAndExamples(BaseModel):
     def render(
         self, classifiee: Classifiee, omit_examples: bool = False, 
     ) -> str:
-        p = self.prompt.replace('{CLASSIFIEE}', classifiee)
+        p = self.prompt.replace('{CLASSIFIEE}', f'<query>\n{classifiee}\n</query>')
         if not omit_examples:
             p = p.replace('{EXAMPLES}', '\n\n'.join(
                 ex.render() for ex in self.examples

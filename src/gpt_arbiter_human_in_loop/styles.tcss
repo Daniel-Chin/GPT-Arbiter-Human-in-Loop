@@ -123,6 +123,7 @@ Button {
 }
 #query-question {
     color: yellow;
+    width: 100%;
 }
 
 #gpt-responses {
