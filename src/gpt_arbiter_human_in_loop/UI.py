@@ -13,7 +13,7 @@ from textual.pilot import Pilot
 from textual.reactive import reactive
 from textual.app import App, ComposeResult, ScreenStackError
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Grid
+from textual.containers import Container, Horizontal, Grid, VerticalScroll
 from textual.widgets import (
     Button, Footer, Header, Input, RadioButton, RadioSet, 
     Static, ContentSwitcher, Link,
@@ -160,7 +160,8 @@ class UI(App):
             with Container(id="query-section"):
                 yield Static("The GPT arbiter is entrusting you with the following decision!", id="greeter", classes='auto-width margin-h-1')
                 yield LinkPrivate("[url]", id="query-url", classes='auto-width margin-h-1')
-                yield Static("", id="query-question", classes='auto-width margin-h-1')
+                with VerticalScroll(id="query-question-scroller"):
+                    yield Static("", id="query-question", classes='auto-width margin-h-1')
                 
                 # GPT responses
                 with Horizontal(id="gpt-inspection"):
