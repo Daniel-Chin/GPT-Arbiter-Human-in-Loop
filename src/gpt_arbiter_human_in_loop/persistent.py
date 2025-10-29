@@ -41,6 +41,7 @@ class Persistent:
     def __init__(self, /, path: str) -> None:
         self.path = path
         self.__data: dict[str, ItemAnnotations] = {}
+        self.is_in_context = False
     
     @contextmanager
     def Context(self) -> tp.Generator[dict[str, ItemAnnotations], None, None]:
@@ -52,9 +53,11 @@ class Persistent:
                 self.__data[k] = ItemAnnotations.model_validate(v)
         except FileNotFoundError:
             pass
+        self.is_in_context = True
         try:
             yield self.__data
         finally:
+            self.is_in_context = False
             with open(self.path, 'w', encoding='utf-8') as f:
                 json.dump(
                     {k: v.model_dump() for k, v in self.__data.items()},
@@ -63,7 +66,9 @@ class Persistent:
                 )
     
     def get(self, id_: str) -> ItemAnnotations:
+        assert self.is_in_context
         return self.__data.get(id_, ItemAnnotations.Unvisited())
     
     def set(self, id_: str, ann: ItemAnnotations) -> None:
+        assert self.is_in_context
         self.__data[id_] = ann

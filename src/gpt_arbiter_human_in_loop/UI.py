@@ -4,8 +4,10 @@ import json
 import typing as tp
 import time
 import math
+import threading
 
 from textual import on
+from textual.pilot import Pilot
 from textual.reactive import reactive
 from textual.app import App, ComposeResult, ScreenStackError
 from textual.binding import Binding
@@ -79,10 +81,27 @@ class UI(App):
         self.last_gpt_time = 0.0
         self.arbitTask: asyncio.Task | None = None
         self.selectQueryTask: asyncio.Task | None = None
+        self.selectQueryBarrier = threading.Lock()
+        self.selectQueryBarrier.acquire()
 
         self.prompt_and_examples = self.readPromptAndExamples()
 
         self.title = "GPT Arbiter Human-in-Loop"
+    
+    def run(
+        self, *, headless: bool = False, inline: bool = False, 
+        inline_no_clear: bool = False, mouse: bool = True, 
+        size: tuple[int, int] | None = None, 
+        auto_pilot: tp.Callable[
+            [Pilot[object]], tp.Coroutine[tp.Any, tp.Any, None]
+        ] | None = None, loop: asyncio.AbstractEventLoop | None = None, 
+    ) -> tp.Any | None:
+        with self.Context():
+            return super().run(
+                headless=headless, inline=inline, 
+                inline_no_clear=inline_no_clear, mouse=mouse, 
+                size=size, auto_pilot=auto_pilot, loop=loop, 
+            )
 
     def readPromptAndExamples(self) -> PromptAndExamples:
         with open(self.prompt_and_examples_filename, 'r') as f:
@@ -201,10 +220,17 @@ class UI(App):
         bNo.value  = False
         explainInput.value = ''
         self.myUpdate()
-        assert self.selectQueryTask is None
-        self.selectQueryTask = asyncio.create_task(asyncio.to_thread(self.nextQuery))
+        self.maybeStartSelectQuery()
     
-    def nextQuery(self) -> None:
+    def maybeStartSelectQuery(self) -> None:
+        assert self.selectQueryTask is None
+        self.selectQueryTask = asyncio.create_task(
+            asyncio.to_thread(self.selectQuery), 
+        )
+        self.selectQueryBarrier.release()
+    
+    def selectQuery(self) -> None:
+        self.selectQueryBarrier.acquire()
         try:
             def score(id_: str) -> float:
                 anno = self.persistent.get(id_)
@@ -310,17 +336,20 @@ class UI(App):
         return True
 
     async def arbit(self, id_: str, birthline: float) -> None:
-        dt = birthline - time.time()
-        if dt > 0.0:
-            await asyncio.sleep(dt)
-        self.last_gpt_time = time.time()
-        result = await self.arbiter.judge(
-            model=self.model_name, 
-            prompt=self.prompt_and_examples.render(
-                self.idToClassifiee(id_),
-            ),
-            max_tokens=1,
-        )
+        try:
+            dt = birthline - time.time()
+            if dt > 0.0:
+                await asyncio.sleep(dt)
+            self.last_gpt_time = time.time()
+            result = await self.arbiter.judge(
+                model=self.model_name, 
+                prompt=self.prompt_and_examples.render(
+                    self.idToClassifiee(id_),
+                ),
+                max_tokens=1,
+            )
+        except asyncio.CancelledError:
+            return
         self.persistent.set(id_, ItemAnnotations(
             gpt_verdict=result,
             status=ItemStatus.Classified(),
@@ -334,9 +363,7 @@ class UI(App):
             return
         self.arbitNext()
         if self.selectQueryTask is None and self.querying_id is None:
-            self.selectQueryTask = asyncio.create_task(
-                asyncio.to_thread(self.nextQuery), 
-            )
+            self.maybeStartSelectQuery()
     
     def onAllFinished(self) -> None:
         self.exit(message='All items have been classified.')
@@ -385,9 +412,9 @@ class UI(App):
         )
     
     def on_mount(self) -> None:
-        self.selectQueryTask = asyncio.create_task(asyncio.to_thread(self.nextQuery))
-        self.myUpdate()
+        self.maybeStartSelectQuery()
         self.updateThrottleDisplay()
+        self.myUpdate()
         onOff: RadioSet = self.query_one('#on-off', RadioSet)
         onOff.focus()
     
@@ -456,3 +483,8 @@ class UI(App):
             if self.persistent.get(id_).status == ItemStatus.Classified()
         )
         cProgressBox.border_subtitle = f'{classified} / {total}'
+    
+    def exit(self, result=None, return_code=None, message=None) -> None:
+        if self.arbitTask is not None:
+            self.arbitTask.cancel()
+        return super().exit(result, return_code, message)
