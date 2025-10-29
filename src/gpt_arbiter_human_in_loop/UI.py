@@ -7,7 +7,7 @@ import math
 
 from textual import on
 from textual.reactive import reactive
-from textual.app import App, ComposeResult
+from textual.app import App, ComposeResult, ScreenStackError
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Grid
 from textual.widgets import (
@@ -102,7 +102,7 @@ class UI(App):
         yield Header(show_clock=False)
         
         with Grid(id="upper-pane"):
-            yield titled(Static("$ 0.01", id="cost-display"), 'Cost')
+            yield titled(Static("GPT-5-mini", id="model-name"), 'Model')
             with titled(Horizontal(id='throttle-pane'), 'Throttle'):
                 with ContentSwitcher(id="throttle-controls", initial="throttle-active"):
                     with Horizontal(id="throttle-active"):
@@ -111,12 +111,12 @@ class UI(App):
                         yield Button("+", id="throttle-up-btn")
                     yield Static("Inactive.", classes='padding-h-1 auto-width', id="throttle-inactive")
                 yield Button("Engage", id="throttle-toggle-btn")
-            yield titled(Static("GPT-5-mini", id="model-name"), 'Model')
             with titled(Container(id='progress-box'), 'Progress', skip_bottom=False):
                 yield StackedBar('-0123456789', id='stacked-bar')
+            yield titled(Static("$ 0.01", id="cost-display"), 'Cost', skip_bottom=False)
             with titled(RadioSet(id='on-off'), 'GPT Switch', skip_bottom=False):
-                yield RadioButton("Judge", id="on-radio")
                 yield RadioButton("Pause", id="off-radio", value=True)
+                yield RadioButton("Judge", id="on-radio")
             yield titled(Histogram(
                 ('No', 'Yes'), id="decisions-histogram",
             ), 'Decisions and Confidence', skip_bottom=False)
@@ -140,13 +140,13 @@ class UI(App):
                             yield Static("who knows", id="gpt-why-no",  classes='auto-width')
                             yield Static("who knows", id="gpt-why-yes", classes='auto-width')
         
-        # Human input section
-        with titled(Grid(id="human-input"), 'What do you think?', skip_bottom=False):
-            yield Button("Submit", id="submit-btn")
-            with RadioSet(id='yes-no'):
-                yield RadioButton("No", id="no-radio")
-                yield RadioButton("Yes", id="yes-radio")
-            yield Input(placeholder="(Optional) Explain...", id="explanation-input")
+                # Human input section
+                with titled(Grid(id="human-input"), 'What do you think?', skip_bottom=False):
+                    yield Button("Submit", id="submit-btn")
+                    with RadioSet(id='yes-no'):
+                        yield RadioButton("No", id="no-radio")
+                        yield RadioButton("Yes", id="yes-radio")
+                    yield Input(placeholder="(Optional) Explain...", id="explanation-input")
 
         yield Footer(compact=True)
     
@@ -363,7 +363,9 @@ class UI(App):
         self.updateThrottleDisplay()
     
     def updateThrottleDisplay(self) -> None:
-        if not self.is_on_screen:
+        try:
+            self.screen
+        except ScreenStackError:
             return
         switcher: ContentSwitcher = self.query_one('#throttle-controls', ContentSwitcher)
         switcher.current = (
@@ -371,10 +373,11 @@ class UI(App):
             'throttle-inactive'
         )
         display: Static = self.query_one('#throttle-display', Static)
-        display.update(
+        text = (
             f'{round(self.throttle_qps)} / sec' if self.throttle_qps >= 1.0 else
             f'1 / {round(1 / self.throttle_qps)} sec'
         )
+        display.update(text, layout=True)
         button: Button = self.query_one('#throttle-toggle-btn', Button)
         button.label = (
             'Disengage' if self.throttle_active else 
@@ -385,6 +388,8 @@ class UI(App):
         self.selectQueryTask = asyncio.create_task(asyncio.to_thread(self.nextQuery))
         self.myUpdate()
         self.updateThrottleDisplay()
+        onOff: RadioSet = self.query_one('#on-off', RadioSet)
+        onOff.focus()
     
     def myUpdate(self) -> None:
         yesNo: RadioSet = self.query_one('#yes-no', RadioSet)
@@ -444,3 +449,10 @@ class UI(App):
             assert p is not None
             new_data.append(p)
         histogram.data = new_data
+        cProgressBox: Container = self.query_one('#progress-box', Container)
+        total = len(self.all_ids)
+        classified = sum(
+            1 for id_ in self.all_ids
+            if self.persistent.get(id_).status == ItemStatus.Classified()
+        )
+        cProgressBox.border_subtitle = f'{classified} / {total}'

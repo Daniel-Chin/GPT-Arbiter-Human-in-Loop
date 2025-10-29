@@ -46,13 +46,13 @@ Button {
 
 #upper-pane {
     grid-size: 5;
-    grid-columns: auto 1fr 1.5fr 1fr 2fr;
-    grid-rows: auto 4;
+    grid-columns: auto 0.3fr 0.8fr 2fr 2fr;
+    grid-rows: 2 auto;
 }
 
-#progress-box {
-    row-span: 2;
-    height: 100%;
+#model-name {
+    column-span: 2;
+    height: auto;
 }
 
 #throttle-pane {
@@ -62,6 +62,18 @@ Button {
 #throttle-down-btn{
     margin-left: 0;
 }
+#throttle-up-btn{
+    margin-left: 0;
+}
+
+#progress-box {
+    row-span: 2;
+    height: 100%;
+}
+
+#cost-display {
+    height: 4;
+}
 
 #on-off {
     column-span: 2;
@@ -69,7 +81,7 @@ Button {
 }
 
 #decisions-histogram {
-    column-span: 2;
+    column-span: 1;
     height: auto;
 }
 
