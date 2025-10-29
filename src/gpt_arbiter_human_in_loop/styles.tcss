@@ -116,12 +116,15 @@ Button {
     height: 1fr;
 }
 
-#query-question-scroller {
+#query-tabs{
+    height: 1fr;
+}
+.query-text-scroller {
     height: 1fr;
     width: 100%;
     background: #111;
 }
-#query-question {
+.query-text {
     color: yellow;
     width: 100%;
 }

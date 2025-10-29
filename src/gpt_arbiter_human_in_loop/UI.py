@@ -16,7 +16,7 @@ from textual.binding import Binding
 from textual.containers import Container, Horizontal, Grid, VerticalScroll
 from textual.widgets import (
     Button, Footer, Header, Input, RadioButton, RadioSet, 
-    Static, ContentSwitcher, Link,
+    Static, ContentSwitcher, Link, TabbedContent, TabPane,
 )
 import webbrowser
 
@@ -160,8 +160,16 @@ class UI(App):
             with Container(id="query-section"):
                 yield Static("The GPT arbiter is entrusting you with the following decision!", id="greeter", classes='auto-width margin-h-1')
                 yield LinkPrivate("[url]", id="query-url", classes='auto-width margin-h-1')
-                with VerticalScroll(id="query-question-scroller"):
-                    yield Static("", id="query-question", classes='margin-h-1')
+                with TabbedContent(id="query-tabs", initial="tab-classifiee"):
+                    with TabPane("Classifiee", id="tab-classifiee"):
+                        with VerticalScroll(classes="query-text-scroller"):
+                            yield Static("", id='query-text-classifiee', classes="query-text")
+                    with TabPane("With prompt", id="tab-with-prompt"):
+                        with VerticalScroll(classes="query-text-scroller"):
+                            yield Static("", id='query-with-prompt', classes="query-text")
+                    with TabPane("With examples", id="tab-with-examples"):
+                        with VerticalScroll(classes="query-text-scroller"):
+                            yield Static("", id='query-with-examples', classes="query-text")
                 
                 # GPT responses
                 with Horizontal(id="gpt-inspection"):
@@ -469,10 +477,28 @@ class UI(App):
             sQueryURL.update(url)
             sQueryURL.url = 'https://' + url
             classifiee = self.idToClassifiee(self.querying_id)
-            sQueryQuestion: Static = self.query_one('#query-question', Static)
-            sQueryQuestion.update(self.prompt_and_examples.render(
-                classifiee, omit_examples=True, 
-            ))
+
+            sQueryTextClassifiee: Static = self.query_one(
+                '#query-text-classifiee', Static, 
+            )
+            sQueryTextClassifiee.update(classifiee)
+            sQueryWithPrompt: Static = self.query_one(
+                '#query-with-prompt', Static, 
+            )
+            sQueryWithPrompt.update(
+                self.prompt_and_examples.render(
+                    classifiee, omit_examples=True, 
+                )
+            )
+            sQueryWithExamples: Static = self.query_one(
+                '#query-with-examples', Static, 
+            )
+            sQueryWithExamples.update(
+                self.prompt_and_examples.render(
+                    classifiee, omit_examples=False, 
+                )
+            )
+
             anno = self.persistent.get(self.querying_id)
             assert anno.gpt_verdict is not None
             sNo:  Static = self.query_one('#gpt-no-response',  Static)
