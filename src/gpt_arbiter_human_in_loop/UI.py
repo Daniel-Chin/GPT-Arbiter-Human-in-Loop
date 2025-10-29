@@ -150,7 +150,7 @@ class UI(App):
                 
                 # GPT responses
                 with Horizontal(id="gpt-inspection"):
-                    with Container(id="gpt-responses", classes='auto-width margin-h-1'):
+                    with Container(id="gpt-responses", classes='auto-width'):
                         yield Static('GPT said "No" (1%).', classes='auto-width', id="gpt-no-response")
                         yield Static('GPT said "Yes" (99%).', classes='auto-width', id="gpt-yes-response")
                     with ContentSwitcher(id="gpt-why-switcher", initial="ask-why-btn"):
@@ -183,14 +183,22 @@ class UI(App):
     @on(RadioSet.Changed, '#yes-no')
     def onYesNoChanged(self) -> None:
         yesNo: RadioSet = self.query_one('#yes-no', RadioSet)
+        pressed_index = yesNo.pressed_index
         bSubmit: Button = self.query_one('#submit-btn', Button)
         bSubmit.disabled = (
-            yesNo.pressed_index == 1
+            pressed_index == 1
         )
         bSubmit.focus()
         self.query_one('#explanation-input', Input).visible = (
-            yesNo.pressed_index != 1
+            pressed_index != 1
         )
+        for radioButton in yesNo._nodes:
+            assert isinstance(radioButton, RadioButton)
+            radioButton.styles.color = (
+                '#0f0' if yesNo._pressed_button is radioButton 
+                else 'white'
+            )
+            radioButton.notify_style_update()
 
     def action_focus_explanation(self) -> None:
         e = self.query_one('#explanation-input', Input)
