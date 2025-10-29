@@ -114,6 +114,7 @@ Button {
 
 #gpt-responses {
     color: cyan;
+    margin-left: 1;
 }
 #gpt-why-response {
     color: cyan;
