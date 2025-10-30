@@ -499,7 +499,18 @@ class UI(App):
             sWhyNo.update(self.gpt_reasons[0])
             sWhyYes.update(self.gpt_reasons[1])
         sCost: Static = self.query_one('#cost-display', Static)
-        sCost.update(f'$ {self.arbiter.getRunningCost():.2f}')
+        estimated_total = format(
+            self.arbiter.getCostPerItem() * len(self.all_ids),
+            '.2f',
+        )
+        running = format(
+            self.arbiter.getRunningCost(),
+            f'{len(estimated_total)}.2f',
+        )
+        sCost.update(f'''
+$ {running}
+$ {estimated_total}
+'''.strip(), layout=True)
         stackedBar: StackedBar = self.query_one('#stacked-bar', StackedBar)
         stackedBar.data = ''.join(
             self.persistent.get(id_).status.getSymbol()

@@ -28,3 +28,10 @@ class ArbiterInterface(ABC):
         Returns the total cost incurred so far in USD.
         '''
         raise NotImplementedError
+    
+    @abstractmethod
+    def getCostPerItem(self) -> float:
+        '''
+        Returns the recent cost per item in USD.
+        '''
+        raise NotImplementedError

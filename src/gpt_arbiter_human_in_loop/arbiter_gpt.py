@@ -33,6 +33,7 @@ class ArbiterGPT(ArbiterInterface):
         self.judge = j   # type: ignore
 
         self.running_cost = 0.0
+        self.unit_cost = 0.0
     
     async def judge(
         self, model: str, prompt: str, 
@@ -54,7 +55,8 @@ class ArbiterGPT(ArbiterInterface):
             top_logprobs=5,
         )
         assert isinstance(response, ChatCompletion) # for static type
-        self.running_cost += PRICING[model].estimate(response.usage)
+        self.unit_cost = PRICING[model].estimate(response.usage)
+        self.running_cost += self.unit_cost
         choice = response.choices[0]
         lp = choice.logprobs
         assert lp is not None
@@ -120,3 +122,6 @@ class ArbiterGPT(ArbiterInterface):
 
     def getRunningCost(self) -> float:
         return self.running_cost
+    
+    def getCostPerItem(self) -> float:
+        return self.unit_cost

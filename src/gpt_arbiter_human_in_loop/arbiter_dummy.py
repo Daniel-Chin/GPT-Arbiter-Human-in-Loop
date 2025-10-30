@@ -23,3 +23,6 @@ class ArbiterDummy(ArbiterInterface):
 
     def getRunningCost(self) -> float:
         return 0.0
+    
+    def getCostPerItem(self) -> float:
+        return 0.0
