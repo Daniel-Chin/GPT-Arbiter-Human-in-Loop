@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import json
 import typing as tp
 import time
 import math
@@ -98,7 +97,9 @@ class UI(App):
         self.selectQueryBarrier = threading.Lock()
         self.selectQueryBarrier.acquire()
 
-        self.prompt_and_examples = self.readPromptAndExamples()
+        self.prompt_and_examples = PromptAndExamples.fromFile(
+            prompt_and_examples_filename
+        )
 
         self.title = "GPT Arbiter Human-in-Loop"
     
@@ -117,19 +118,6 @@ class UI(App):
                 size=size, auto_pilot=auto_pilot, loop=loop, 
             )
 
-    def readPromptAndExamples(self) -> PromptAndExamples:
-        with open(self.prompt_and_examples_filename, 'r') as f:
-            j = json.load(f)
-            return PromptAndExamples.model_validate(j)
-
-    def writePromptAndExamples(self) -> None:
-        with open(self.prompt_and_examples_filename, 'w') as f:
-            json.dump(
-                self.prompt_and_examples.model_dump(),
-                f,
-                indent=2,
-            )
-    
     def compose(self) -> ComposeResult:
         # Header
         yield Header(show_clock=False)
@@ -244,14 +232,13 @@ class UI(App):
         self.persistent.labelOne(self.querying_id, label)
         explainInput: Input = self.query_one('#explanation-input', Input)
         explanation = explainInput.value.strip() or None
-        self.prompt_and_examples = self.prompt_and_examples.addExample(
+        self.prompt_and_examples = self.prompt_and_examples.addExampleSyncingFile(
             QAPair(
                 question = self.idToClassifiee(self.querying_id),
                 no_or_yes = label,
                 explanation = explanation,
-            )
+            ),
         )
-        self.writePromptAndExamples()
 
         self.querying_id = None
         self.gpt_reasons = None

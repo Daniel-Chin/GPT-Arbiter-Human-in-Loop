@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
+import json
 
 from pydantic import BaseModel, ConfigDict
 from textual.widget import Widget
@@ -31,12 +33,23 @@ class QAPair(BaseModel):
         return s + '\n</reference>'
 
 class PromptAndExamples(BaseModel):
+    abs_file_path: str
     prompt: str
     examples: list[QAPair]
 
     model_config = ConfigDict(
         frozen=True,
     )
+
+    @classmethod
+    def fromFile(cls, abs_file_path: str) -> PromptAndExamples:
+        with open(abs_file_path, 'r', encoding='utf-8') as f:
+            j = json.load(f)
+        return cls.model_validate(j)
+    
+    def writeFile(self) -> None:
+        with open(self.abs_file_path, 'w', encoding='utf-8') as f:
+            json.dump(self.model_dump(), f, indent=2)
 
     def render(
         self, classifiee: Classifiee, omit_examples: bool = False, 
@@ -48,11 +61,15 @@ class PromptAndExamples(BaseModel):
             ))
         return p
     
-    def addExample(self, example: QAPair) -> PromptAndExamples:
-        return PromptAndExamples(
-            prompt=self.prompt,
-            examples=[*self.examples, example],
+    def addExampleSyncingFile(self, example: QAPair) -> PromptAndExamples:
+        latest = self.fromFile(self.abs_file_path)
+        added = PromptAndExamples(
+            abs_file_path=latest.abs_file_path,
+            prompt=latest.prompt,
+            examples=[*latest.examples, example],
         )
+        added.writeFile()
+        return added
 
 def titled(
     w: Widget, /, title: str, skip_bottom: bool = True,
@@ -109,7 +126,7 @@ class ItemStatus:
     @dataclass(frozen=True)
     class Outdated(Base):
         value: int
-        
+
         def getSymbol(self) -> str:
             if self.value < 10:
                 return str(self.value)
