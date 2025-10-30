@@ -98,7 +98,7 @@ class UI(App):
         self.selectQueryTask: asyncio.Task | None = None
         self.selectQueryBarrier = threading.Lock()
         self.selectQueryBarrier.acquire()
-        self.original_anno_of_last_arbit: ItemAnnotations | None = None
+        self.last_arbit_info: tuple[ItemAnnotations, float] | None = None
 
         self.prompt_and_examples = PromptAndExamples.fromFile(
             prompt_and_examples_filename
@@ -447,7 +447,7 @@ class UI(App):
             # self.log('judge ok.')
         except asyncio.CancelledError:
             return
-        self.original_anno_of_last_arbit = self.persistent.get(id_)
+        self.last_arbit_info = (self.persistent.get(id_), result)
         self.persistent.set(id_, ItemAnnotations(
             gpt_verdict=result,
             status=ItemStatus.Classified(),
@@ -619,14 +619,17 @@ $ {estimated_total}
         closing = '' if is_even else '[/]'
         progress = f'{opening} {classified} {closing}/ {total}'
         last_info = ''
-        if self.original_anno_of_last_arbit is not None:
-            match self.original_anno_of_last_arbit.status:
+        if self.last_arbit_info is not None:
+            last_anno, new_verdict = self.last_arbit_info
+            match last_anno.status:
                 case ItemStatus.Unvisited():
                     last_k = '-'
                 case _:
-                    last_k = str(self.original_anno_of_last_arbit.status.staleness)
-            last_p = self.original_anno_of_last_arbit.gpt_verdict
-            last_info = f'Last: k={last_k} p={last_p:.0%}. '
+                    last_k = str(last_anno.status.staleness)
+            last_p = last_anno.gpt_verdict
+            assert last_p is not None
+            delta = new_verdict - last_p
+            last_info = f'Last: k={last_k} p={last_p:.0%}{delta:+.0%}. '
         cProgressBox.border_subtitle = last_info + progress
         # self.refresh(repaint=True)    # somehow mitigates the log interruption issue (#1) but makes the issue opaque
     
