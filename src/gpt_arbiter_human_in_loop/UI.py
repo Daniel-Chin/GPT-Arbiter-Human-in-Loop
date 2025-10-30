@@ -6,6 +6,7 @@ import math
 import threading
 import subprocess
 import shutil
+import random
 
 from textual import on
 from textual.pilot import Pilot
@@ -76,7 +77,8 @@ class UI(App):
 
         self.arbiter = arbiter
         self.prompt_and_examples_filename = prompt_and_examples_filename
-        self.all_ids = all_ids
+        self.unsorted_all_ids = all_ids
+        self.all_ids: list[str] | None = None
         self.idToClassifiee = idToClassifiee
         self.Lambda = Lambda
         self.model_name = model_name
@@ -103,6 +105,44 @@ class UI(App):
 
         self.title = "GPT Arbiter Human-in-Loop"
     
+    @staticmethod
+    def orderedIds(
+        unsorted: tp.Sequence[str], persistent: Persistent,
+        Lambda: float,
+    ) -> list[str]:
+        '''
+        - Order visited items by how probable GPT has new ideas about them.
+          - The math mirrors the query selection scoring.
+        - Randomly shuffle unvisited items.  
+          - i.i.d. is important.  
+        '''
+        visited: list[tuple[str, ItemAnnotations]] = []
+        unvisited: list[str] = []
+        for id_ in unsorted:
+            anno = persistent.get(id_)
+            if anno.status == ItemStatus.Unvisited():
+                unvisited.append(id_)
+            else:
+                visited.append((
+                    id_, anno
+                ))
+        
+        def score(item: tuple[str, ItemAnnotations]) -> float:
+            _, anno_ = item
+            k = anno_.status.staleness
+            p = anno_.gpt_verdict
+            assert p is not None
+            H2 = -p * math.log2(p) - (1 - p) * math.log2(
+                1 - p
+            ) if 0.0 < p < 1.0 else 0.0
+            return H2 * (1 - (1 - 1 / Lambda) ** k)
+
+        visited.sort(key=score)
+        random.shuffle(unvisited)
+        return unvisited + [
+            id_ for id_, _ in visited
+        ]
+    
     def run(
         self, *, headless: bool = False, inline: bool = False, 
         inline_no_clear: bool = False, mouse: bool = True, 
@@ -111,7 +151,10 @@ class UI(App):
             [Pilot[object]], tp.Coroutine[tp.Any, tp.Any, None]
         ] | None = None, loop: asyncio.AbstractEventLoop | None = None, 
     ) -> tp.Any | None:
-        with self.Context():
+        with self.persistent.Context():
+            self.all_ids = __class__.orderedIds(
+                self.unsorted_all_ids, self.persistent, self.Lambda, 
+            )
             return super().run(
                 headless=headless, inline=inline, 
                 inline_no_clear=inline_no_clear, mouse=mouse, 
@@ -265,6 +308,7 @@ class UI(App):
         self.selectQueryBarrier.release()
     
     def selectQuery(self) -> None:
+        assert self.all_ids is not None
         self.selectQueryBarrier.acquire()
         try:
             def score(id_: str) -> float:
@@ -341,6 +385,7 @@ class UI(App):
                 self.myUpdate()
     
     def arbitNext(self) -> bool:
+        assert self.all_ids is not None
         assert self.arbitTask is None
         initial_cursor = self.cursor
         while True:
@@ -370,6 +415,7 @@ class UI(App):
         return True
 
     async def arbit(self, id_: str, birthline: float) -> None:
+        assert self.all_ids is not None
         try:
             dt = birthline - time.time()
             # self.log(f'{dt = }')
@@ -457,6 +503,7 @@ class UI(App):
         onOff.focus()
     
     def myUpdate(self) -> None:
+        assert self.all_ids is not None
         sModelName: Static = self.query_one('#model-name', Static)
         sModelName.update(self.model_name)
         self.onYesNoChanged()

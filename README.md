@@ -26,6 +26,11 @@
   - Old uncertainty may have already been addressed.
   - Hyperparam: data diversity $\Lambda$. Its inverse, $1 / \Lambda$, equals the probability that labeling A significantly explains B, where A and B are independently drawn from the data distribution.
   - The average information gain of querying a datapoint currently classified k queries ago with probability simplex (p, 1-p) is therefore $H_2(p)(1-1/\Lambda)^k$ where binary entropy $H_2(p) = -p log_2(p) - (1-p) log_2(1-p)$
+- The sorting of to-arbit datapoints:
+  - Order visited items by how probable GPT has new ideas about them.
+    - $H_2(p)(1-(1-1/\Lambda)^k)$
+  - Randomly shuffle unvisited items.  
+    - i.i.d. is important.  
 
 ## Gotchas
 - OpenAI exposes no pricing API, so the unit price may get outdated. See [pricing.py](./src/gpt_arbiter_human_in_loop/pricing.py)
