@@ -34,6 +34,7 @@ RadioSet {
 }
 RadioButton {
     background: transparent;
+    width: auto;
 }
 # .toggle--button {
 #     background: transparent;
@@ -48,21 +49,35 @@ Button {
     margin: 0 1;
 }
 
-#upper-pane {
-    grid-size: 5;
-    grid-columns: auto 0.3fr 0.8fr 2fr 2fr;
-    grid-rows: 2 auto;
+# #upper-pane {
+#     width: 100%;
+# }
+#upper-left-pane {
+    width: 8fr;
+}
+#progress-box {
+    width: 5fr;
+    height: 100%;
 }
 
+# #row-0 {
+#     width: 100%;
+# }
+
 #model-name {
-    column-span: 2;
+    width: auto;
     height: auto;
 }
 
 #throttle-pane {
-    column-span: 2;
+    width: auto;
 }
-
+#throttle-controls {
+    width: auto;
+}
+#throttle-active {
+    width: auto;
+}
 #throttle-down-btn{
     margin-left: 0;
 }
@@ -70,23 +85,22 @@ Button {
     margin-left: 0;
 }
 
-#progress-box {
-    row-span: 2;
-    height: 100%;
-}
-
 #cost-display {
-    height: 4;
+    width: auto;
+    height: auto;
 }
 
 #on-off {
-    column-span: 2;
+    width: auto;
     height: auto;
 }
 
 #decisions-histogram {
-    column-span: 1;
+    width: 4325fr;
     height: auto;
+}
+.histogram-axis-label {
+    color: #aaa;
 }
 
 # Switch {

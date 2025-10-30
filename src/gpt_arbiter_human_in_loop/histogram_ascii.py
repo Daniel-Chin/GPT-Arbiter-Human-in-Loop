@@ -15,7 +15,7 @@ class Histogram(Container):
         super().__init__(*args, **kw)
 
         self.sparkline = Sparkline()
-        self.axisLabel = Static()
+        self.axisLabel = Static(classes='histogram-axis-label')
 
         self.axis_label = axis_label
     

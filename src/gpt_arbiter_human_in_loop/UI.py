@@ -122,25 +122,28 @@ class UI(App):
         # Header
         yield Header(show_clock=False)
         
-        with Grid(id="upper-pane"):
-            yield titled(Static("GPT-5-mini", id="model-name"), 'Model')
-            with titled(Horizontal(id='throttle-pane'), 'Throttle'):
-                with ContentSwitcher(id="throttle-controls", initial="throttle-active"):
-                    with Horizontal(id="throttle-active"):
-                        yield Button("-", id="throttle-down-btn")
-                        yield Static("10 / sec"  , classes='padding-h-1 auto-width', id="throttle-display")
-                        yield Button("+", id="throttle-up-btn")
-                    yield Static("Inactive.", classes='padding-h-1 auto-width', id="throttle-inactive")
-                yield Button("Engage", id="throttle-toggle-btn")
+        with Horizontal(id="upper-pane"):
+            with Container(id='upper-left-pane'):
+                with Horizontal(id="row-0"):
+                    yield titled(Static("GPT-5-mini", id="model-name"), 'Model')
+                    with titled(Horizontal(id='throttle-pane'), 'Throttle'):
+                        with ContentSwitcher(id="throttle-controls", initial="throttle-active"):
+                            with Horizontal(id="throttle-active"):
+                                yield Button("-", id="throttle-down-btn")
+                                yield Static("10 / sec"  , classes='padding-h-1 auto-width', id="throttle-display")
+                                yield Button("+", id="throttle-up-btn")
+                            yield Static("Inactive.", classes='padding-h-1 auto-width', id="throttle-inactive")
+                        yield Button("Engage", id="throttle-toggle-btn")
+                with Horizontal(id="row-1"):
+                    yield titled(Static("$ 0.01", id="cost-display"), 'Cost', skip_bottom=False)
+                    with titled(RadioSet(id='on-off'), 'GPT', skip_bottom=False):
+                        yield RadioButton("Pause", id="off-radio", value=True)
+                        yield RadioButton("Judge", id="on-radio")
+                    yield titled(Histogram(
+                        ('No', 'Yes'), id="decisions-histogram",
+                    ), 'Decisions and Confidence', skip_bottom=False)
             with titled(Container(id='progress-box'), 'Progress', skip_bottom=False):
                 yield StackedBar('-0123456789', id='stacked-bar')
-            yield titled(Static("$ 0.01", id="cost-display"), 'Cost', skip_bottom=False)
-            with titled(RadioSet(id='on-off'), 'GPT Switch', skip_bottom=False):
-                yield RadioButton("Pause", id="off-radio", value=True)
-                yield RadioButton("Judge", id="on-radio")
-            yield titled(Histogram(
-                ('No', 'Yes'), id="decisions-histogram",
-            ), 'Decisions and Confidence', skip_bottom=False)
         
         # Query section
         with ContentSwitcher(id="query-switcher", initial="query-empty"):
