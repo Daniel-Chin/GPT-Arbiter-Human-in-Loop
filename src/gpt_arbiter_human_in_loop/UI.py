@@ -150,7 +150,9 @@ class UI(App):
             yield Static('', id="query-empty")
             with Container(id="query-section"):
                 yield Static("The GPT arbiter is entrusting you with the following decision!", id="greeter", classes='auto-width margin-h-1')
-                yield LinkPrivate("[url]", id="query-url", classes='auto-width margin-h-1')
+                with Horizontal():
+                    yield LinkPrivate("[url]", id="query-url", classes='auto-width margin-h-1')
+                    yield Static('#4', id="query-index", classes='auto-width margin-h-1')
                 with TabbedContent(id="query-tabs", initial="tab-classifiee"):
                     with TabPane("Classifiee", id="tab-classifiee"):
                         with VerticalScroll(classes="query-text-scroller"):
@@ -552,6 +554,10 @@ $ {estimated_total}
         opening = '' if is_even else '[#000 on #ddd]'
         closing = '' if is_even else '[/]'
         cProgressBox.border_subtitle = f'{opening} {classified} {closing}/ {total}'
+        sQueryId: Static = self.query_one('#query-index', Static)
+        if self.querying_id is not None:
+            sQueryId.update(f'#{self.all_ids.index(self.querying_id)}')
+        # self.refresh(repaint=True)    # somehow mitigates the log interruption issue (#1) but makes the issue opaque
     
     def exit(self, result=None, return_code=None, message=None) -> None:
         if self.arbitTask is not None:
