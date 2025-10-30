@@ -36,6 +36,18 @@ class ItemAnnotations(BaseModel):
             status=ItemStatus.Unvisited(),
             human_label_no_or_yes=None,
         )
+    
+    def afterOneLabel(self) -> ItemAnnotations:
+        match self.status:
+            case ItemStatus.Unvisited():
+                return self
+            case _:
+                k = self.status.staleness
+        return ItemAnnotations(
+            gpt_verdict=self.gpt_verdict,
+            status=ItemStatus.Outdated(k + 1),
+            human_label_no_or_yes=self.human_label_no_or_yes,
+        )
 
 class Persistent:
     def __init__(self, /, path: str) -> None:
@@ -72,3 +84,15 @@ class Persistent:
     def set(self, id_: str, ann: ItemAnnotations) -> None:
         assert self.is_in_context
         self.__data[id_] = ann
+
+    def labelOne(self, id_: str, label: int) -> None:
+        old = self.get(id_)
+        self.set(id_, ItemAnnotations(
+            gpt_verdict=old.gpt_verdict,
+            status=ItemStatus.Classified(),
+            human_label_no_or_yes=label,
+        ))
+        for other, anno in self.__data.items():
+            if other == id_:
+                continue
+            self.set(other, anno.afterOneLabel())

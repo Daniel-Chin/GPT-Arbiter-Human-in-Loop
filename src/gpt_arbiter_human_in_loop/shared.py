@@ -73,7 +73,13 @@ class ItemStatus:
         def getSymbol(self) -> str:
             raise NotImplementedError()
         
+        @abstractmethod
         def serialize(self) -> ItemStatus.Primitive:
+            raise NotImplementedError()
+        
+        @property
+        @abstractmethod
+        def staleness(self) -> int:
             raise NotImplementedError()
     
     @dataclass(frozen=True)
@@ -83,6 +89,10 @@ class ItemStatus:
         
         def serialize(self) -> ItemStatus.Primitive:
             return ('Unvisited', {})
+        
+        @property
+        def staleness(self) -> int:
+            raise ValueError('Unvisited items do not have staleness')
     
     @dataclass(frozen=True)
     class Classified(Base):
@@ -91,10 +101,15 @@ class ItemStatus:
 
         def serialize(self) -> ItemStatus.Primitive:
             return ('Classified', {})
+        
+        @property
+        def staleness(self) -> int:
+            return 0
     
     @dataclass(frozen=True)
     class Outdated(Base):
         value: int
+        
         def getSymbol(self) -> str:
             if self.value < 10:
                 return str(self.value)
@@ -102,6 +117,10 @@ class ItemStatus:
         
         def serialize(self) -> ItemStatus.Primitive:
             return ('Outdated', {'value': self.value})
+        
+        @property
+        def staleness(self) -> int:
+            return self.value
     
     @classmethod
     def deserialize(cls, prim: ItemStatus.Primitive) -> ItemStatus.Base:

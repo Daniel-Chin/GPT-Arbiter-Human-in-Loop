@@ -241,14 +241,9 @@ class UI(App):
         if label == 1:
             return
         label //= 2
+        self.persistent.labelOne(self.querying_id, label)
         explainInput: Input = self.query_one('#explanation-input', Input)
         explanation = explainInput.value.strip() or None
-        old = self.persistent.get(self.querying_id)
-        self.persistent.set(self.querying_id, ItemAnnotations(
-            gpt_verdict=old.gpt_verdict,
-            status=ItemStatus.Classified(),
-            human_label_no_or_yes=label,
-        ))
         self.prompt_and_examples = self.prompt_and_examples.addExample(
             QAPair(
                 question = self.idToClassifiee(self.querying_id),
@@ -257,6 +252,7 @@ class UI(App):
             )
         )
         self.writePromptAndExamples()
+
         self.querying_id = None
         self.gpt_reasons = None
         bUndecided = self.query_one('#undecided-radio', RadioButton)
@@ -283,12 +279,8 @@ class UI(App):
                 match anno.status:
                     case ItemStatus.Unvisited():
                         return -1.0
-                    case ItemStatus.Classified():
-                        k = 0
-                    case ItemStatus.Outdated(value=k):
-                        pass
                     case _:
-                        raise ValueError(f'Unknown ItemStatus: {anno.status}')
+                        k = anno.status.staleness
                 p = anno.gpt_verdict
                 assert p is not None
                 H2 = -p * math.log2(p) - (1 - p) * math.log2(
