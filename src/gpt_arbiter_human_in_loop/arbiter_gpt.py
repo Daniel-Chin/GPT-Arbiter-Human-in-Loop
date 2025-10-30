@@ -3,7 +3,7 @@ from datetime import timedelta
 import typing as tp
 
 import numpy as np
-from openai import AsyncOpenAI
+from openai import OpenAI, AsyncOpenAI
 from openai.types.chat import (
     ChatCompletionUserMessageParam, 
     ChatCompletionAssistantMessageParam,
@@ -19,17 +19,19 @@ from .pricing import PRICING
 class ArbiterGPT(ArbiterInterface):
     def __init__(
         self, 
-        client: AsyncOpenAI, 
+        client: OpenAI, 
+        asyncClient: AsyncOpenAI, 
         cache_stale_after: timedelta = timedelta(weeks=6),
     ):
         '''
         `cache_stale_after` can be `timedelta.max` if `model` in `self.judge()` will always point to a specific checkpoint.
         '''
         self.client = client
+        self.asyncClient = asyncClient
     
         c = cachier(separate_files=True, stale_after=cache_stale_after)
-        j = c(self.judge)
-        self.judge = j   # type: ignore
+        j = c(self.judgeSync)
+        self.judgeSync = j   # type: ignore
 
         self.running_cost = 0.0
         self.unit_cost = 0.0
@@ -37,15 +39,23 @@ class ArbiterGPT(ArbiterInterface):
     async def judge(
         self, model: str, prompt: str, 
         max_tokens: int = 1,
-    ):
+    ) -> float:
         '''
         `max_tokens` can be larger if you want to debug by knowing what it wants to say.
         '''
+        return await asyncio.to_thread(
+            self.judgeSync, model, prompt, max_tokens, 
+        )
+    
+    def judgeSync(
+        self, model: str, prompt: str, 
+        max_tokens: int = 1,
+    ) -> float:
         history = [ChatCompletionUserMessageParam(
             content=prompt, 
             role='user', 
         )]
-        response: ChatCompletion = await self.client.chat.completions.create(
+        response: ChatCompletion = self.client.chat.completions.create(
             model=model, 
             messages=history, 
             max_tokens=max_tokens,
@@ -95,7 +105,7 @@ class ArbiterGPT(ArbiterInterface):
                     role='user', 
                 ),
             ]
-            async for chunk in await self.client.chat.completions.create(
+            async for chunk in await self.asyncClient.chat.completions.create(
                 model=model, 
                 messages=history, 
                 max_tokens=max_tokens,
@@ -126,18 +136,33 @@ class ArbiterGPT(ArbiterInterface):
         return self.unit_cost
 
 def test():
-    client = AsyncOpenAI()
-    arbiter = ArbiterGPT(client)
-    prompt = "Does lava melt apples?"
+    client = OpenAI()
+    asyncClient = AsyncOpenAI()
+    arbiter = ArbiterGPT(client, asyncClient)
+    prompt = "Does lava melt ideas?"
     async def main():
         prob = await arbiter.judge(
-            model='gpt-3.5-turbo', 
+            model='gpt-4o-mini', 
             prompt=prompt, 
         )
         print(f'Probability of YES: {prob:.4f}')
     asyncio.run(main())
     print(f'Running cost: ${arbiter.getRunningCost():.6f}')
     print(f'Cost per item: ${arbiter.getCostPerItem():.6f}')
+    async def main2():
+        def callbackNo(s: str) -> None:
+            print(f'NO response chunk: {s!r}')
+        def callbackYes(s: str) -> None:
+            print(f'YES response chunk: {s!r}')
+        await arbiter.interrogate(
+            model='gpt-4o-mini', 
+            prompt=prompt, 
+            callbackNo=callbackNo,
+            callbackYes=callbackYes,
+            max_tokens=60,
+            question="What is your reasoning?",
+        )
+    asyncio.run(main2())
 
 if __name__ == '__main__':
     test()
