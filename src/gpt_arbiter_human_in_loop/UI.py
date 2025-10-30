@@ -61,8 +61,8 @@ class UI(App):
         idToClassifiee: tp.Callable[[str], Classifiee],
         rw_json_path: str,
         Lambda: float, 
-        model_name: str = 'gpt-5-nano',
-        initial_throttle_qps: float = 10.0, # queries per second
+        model_name: str = 'gpt-4o-mini',
+        initial_throttle_qps: float = 1.0, # queries per second
         interrogate_question: str = 'Explain briefly (1 - 3 sentences, usually 1 short sentence) why you made that decision.',
         interrogate_max_tokens: int = 60,
     ) -> None:

@@ -131,7 +131,7 @@ def test():
     prompt = "Does lava melt apples?"
     async def main():
         prob = await arbiter.judge(
-            model='gpt-3.5-turbo', 
+            model='gpt-4o-mini', 
             prompt=prompt, 
         )
         print(f'Probability of YES: {prob:.4f}')

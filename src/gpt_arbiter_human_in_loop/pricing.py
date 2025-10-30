@@ -50,4 +50,9 @@ PRICING = {
         USD_per_1M_tokens_input_cached=0.005,
         USD_per_1M_tokens_output=0.400,
     ),
+    'gpt-4o-mini': ModelPricing(
+        USD_per_1M_tokens_input=0.150,
+        USD_per_1M_tokens_input_cached=0.075,
+        USD_per_1M_tokens_output=0.600,
+    ),
 }
