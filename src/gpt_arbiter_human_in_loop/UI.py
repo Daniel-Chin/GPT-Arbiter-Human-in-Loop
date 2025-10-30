@@ -98,6 +98,7 @@ class UI(App):
         self.selectQueryTask: asyncio.Task | None = None
         self.selectQueryBarrier = threading.Lock()
         self.selectQueryBarrier.acquire()
+        self.original_anno_of_last_arbit: ItemAnnotations | None = None
 
         self.prompt_and_examples = PromptAndExamples.fromFile(
             prompt_and_examples_filename
@@ -436,6 +437,7 @@ class UI(App):
             # self.log('judge ok.')
         except asyncio.CancelledError:
             return
+        self.original_anno_of_last_arbit = self.persistent.get(id_)
         self.persistent.set(id_, ItemAnnotations(
             gpt_verdict=result,
             status=ItemStatus.Classified(),
@@ -605,7 +607,17 @@ $ {estimated_total}
         is_even = classified % 2 == 0
         opening = '' if is_even else '[#000 on #ddd]'
         closing = '' if is_even else '[/]'
-        cProgressBox.border_subtitle = f'{opening} {classified} {closing}/ {total}'
+        progress = f'{opening} {classified} {closing}/ {total}'
+        last_info = ''
+        if self.original_anno_of_last_arbit is not None:
+            match self.original_anno_of_last_arbit.status:
+                case ItemStatus.Unvisited():
+                    last_k = '-'
+                case _:
+                    last_k = str(self.original_anno_of_last_arbit.status.staleness)
+            last_p = self.original_anno_of_last_arbit.gpt_verdict
+            last_info = f'Last: k={last_k} p={last_p:.0%}'
+        cProgressBox.border_subtitle = last_info + ' ' + progress
         # self.refresh(repaint=True)    # somehow mitigates the log interruption issue (#1) but makes the issue opaque
     
     def exit(self, result=None, return_code=None, message=None) -> None:
