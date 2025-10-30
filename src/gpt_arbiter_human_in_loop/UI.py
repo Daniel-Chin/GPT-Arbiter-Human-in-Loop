@@ -178,7 +178,6 @@ class UI(App):
                     yield Button("Submit", id="submit-btn")
                     with RadioSet(id='yes-no'):
                         yield RadioButton("No", id="no-radio")
-                        yield RadioButton("", id="undecided-radio", value=True)
                         yield RadioButton("Yes", id="yes-radio")
                     yield Input(placeholder="(Optional) Explain...", id="explanation-input")
 
@@ -200,16 +199,16 @@ class UI(App):
         pressed_index = yesNo.pressed_index
         bSubmit: Button = self.query_one('#submit-btn', Button)
         bSubmit.disabled = (
-            pressed_index == 1
+            pressed_index == -1
         )
         bSubmit.focus()
         self.query_one('#explanation-input', Input).visible = (
-            pressed_index != 1
+            pressed_index != -1
         )
         for radioButton in yesNo._nodes:
             assert isinstance(radioButton, RadioButton)
             radioButton.styles.color = (
-                '#0f0' if yesNo._pressed_button is radioButton 
+                '#0f0' if yesNo.pressed_button is radioButton 
                 else 'white'
             )
             radioButton.notify_style_update()
@@ -229,9 +228,8 @@ class UI(App):
             return
         yesNo: RadioSet = self.query_one('#yes-no', RadioSet)
         label = yesNo.pressed_index
-        if label == 1:
+        if label == -1:
             return
-        label //= 2
         self.persistent.labelOne(self.querying_id, label)
         explainInput: Input = self.query_one('#explanation-input', Input)
         explanation = explainInput.value.strip() or None
@@ -243,11 +241,16 @@ class UI(App):
             ),
         )
 
+        pressed_button = yesNo.pressed_button
+        if pressed_button is not None:
+            with self.prevent(RadioButton.Changed):
+                pressed_button.value = False
+            yesNo._pressed_button = None
         self.querying_id = None
         self.gpt_reasons = None
-        bUndecided = self.query_one('#undecided-radio', RadioButton)
-        bUndecided.toggle()
         explainInput.value = ''
+        bAskWhy: Button = self.query_one('#ask-why-btn', Button)
+        bAskWhy.focus()
         self.myUpdate()
         self.maybeStartSelectQuery()
     
