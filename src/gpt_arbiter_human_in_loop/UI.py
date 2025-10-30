@@ -194,8 +194,8 @@ class UI(App):
             with Container(id="query-section"):
                 yield Static("The GPT arbiter is entrusting you with the following decision!", id="greeter", classes='auto-width margin-h-1')
                 with Horizontal():
-                    yield LinkPrivate("[url]", id="query-url", classes='auto-width margin-h-1')
                     yield Static('#4', id="query-index", classes='auto-width margin-h-1')
+                    yield LinkPrivate("[url]", id="query-url", classes='auto-width margin-h-1')
                 with TabbedContent(id="query-tabs", initial="tab-classifiee"):
                     with TabPane("Classifiee", id="tab-classifiee"):
                         with VerticalScroll(classes="query-text-scroller"):
