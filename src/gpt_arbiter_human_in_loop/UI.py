@@ -354,21 +354,24 @@ class UI(App):
             if self.cursor == initial_cursor:
                 self.onAllFinished()
                 return False
+        birthline = (
+            self.last_gpt_time + 1.0 / self.throttle_qps
+            if self.throttle_active else 0.0
+        )
         self.arbitTask = asyncio.create_task(self.arbit(
-            id_,
-            birthline = (
-                self.last_gpt_time + 1.0 / self.throttle_qps
-                if self.throttle_active else 0.0
-            ),
+            id_, birthline=birthline,
         ))
+        # self.log(f'task created with {birthline = }')
         return True
 
     async def arbit(self, id_: str, birthline: float) -> None:
         try:
             dt = birthline - time.time()
+            # self.log(f'{dt = }')
             if dt > 0.0:
                 await asyncio.sleep(dt)
             self.last_gpt_time = time.time()
+            # self.log('judging...')
             result = await self.arbiter.judge(
                 model=self.model_name, 
                 prompt=self.prompt_and_examples.render(
@@ -376,6 +379,7 @@ class UI(App):
                 ),
                 max_tokens=1,
             )
+            # self.log('judge ok.')
         except asyncio.CancelledError:
             return
         self.persistent.set(id_, ItemAnnotations(
@@ -389,6 +393,7 @@ class UI(App):
         self.myUpdate()
         if self.query_one('#off-radio', RadioButton).value:
             return
+        # self.log("self.arbitNext()")
         self.arbitNext()
         if self.selectQueryTask is None and self.querying_id is None:
             self.maybeStartSelectQuery()

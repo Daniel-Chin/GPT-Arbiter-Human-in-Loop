@@ -9,7 +9,7 @@ class ArbiterDummy(ArbiterInterface):
         self, model: str, prompt: str, 
         max_tokens: int,
     ) -> float:
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
         return random.random()
     
     async def interrogate(
