@@ -538,7 +538,10 @@ $ {estimated_total}
             1 for id_ in self.all_ids
             if self.persistent.get(id_).status == ItemStatus.Classified()
         )
-        cProgressBox.border_subtitle = f'{classified} / {total}'
+        is_even = classified % 2 == 0
+        opening = '' if is_even else '[#000 on #ddd]'
+        closing = '' if is_even else '[/]'
+        cProgressBox.border_subtitle = f'{opening} {classified} {closing}/ {total}'
     
     def exit(self, result=None, return_code=None, message=None) -> None:
         if self.arbitTask is not None:
