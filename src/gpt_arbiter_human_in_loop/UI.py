@@ -143,7 +143,7 @@ class UI(App):
                         ('No', 'Yes'), id="decisions-histogram",
                     ), 'GPT Decisions and Confidence', skip_bottom=False)
             with titled(Container(id='progress-box'), 'Progress', skip_bottom=False):
-                yield StackedBar('-0123456789', id='stacked-bar')
+                yield StackedBar('-0123456789+', id='stacked-bar')
         
         # Query section
         with ContentSwitcher(id="query-switcher", initial="query-empty"):
