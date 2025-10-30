@@ -33,7 +33,7 @@ class QAPair(BaseModel):
         return s + '\n</reference>'
 
 class PromptAndExamples(BaseModel):
-    abs_file_path: str
+    file_path: str
     prompt: str
     examples: list[QAPair]
 
@@ -42,13 +42,13 @@ class PromptAndExamples(BaseModel):
     )
 
     @classmethod
-    def fromFile(cls, abs_file_path: str) -> PromptAndExamples:
-        with open(abs_file_path, 'r', encoding='utf-8') as f:
+    def fromFile(cls, file_path: str) -> PromptAndExamples:
+        with open(file_path, 'r', encoding='utf-8') as f:
             j = json.load(f)
         return cls.model_validate(j)
     
     def writeFile(self) -> None:
-        with open(self.abs_file_path, 'w', encoding='utf-8') as f:
+        with open(self.file_path, 'w', encoding='utf-8') as f:
             json.dump(self.model_dump(), f, indent=2)
 
     def render(
@@ -62,9 +62,9 @@ class PromptAndExamples(BaseModel):
         return p
     
     def addExampleSyncingFile(self, example: QAPair) -> PromptAndExamples:
-        latest = self.fromFile(self.abs_file_path)
+        latest = self.fromFile(self.file_path)
         added = PromptAndExamples(
-            abs_file_path=latest.abs_file_path,
+            file_path=latest.file_path,
             prompt=latest.prompt,
             examples=[*latest.examples, example],
         )
