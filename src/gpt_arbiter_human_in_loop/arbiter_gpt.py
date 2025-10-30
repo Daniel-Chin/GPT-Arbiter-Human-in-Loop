@@ -10,7 +10,6 @@ from openai.types.chat import (
     ChatCompletion, ChatCompletionChunk, 
     ChatCompletionStreamOptionsParam,
 )
-# from openai._s
 from cachier import cachier
 
 from .shared import NO_OR_YES
@@ -125,3 +124,20 @@ class ArbiterGPT(ArbiterInterface):
     
     def getCostPerItem(self) -> float:
         return self.unit_cost
+
+def test():
+    client = AsyncOpenAI()
+    arbiter = ArbiterGPT(client)
+    prompt = "Does lava melt apples?"
+    async def main():
+        prob = await arbiter.judge(
+            model='gpt-3.5-turbo', 
+            prompt=prompt, 
+        )
+        print(f'Probability of YES: {prob:.4f}')
+    asyncio.run(main())
+    print(f'Running cost: ${arbiter.getRunningCost():.6f}')
+    print(f'Cost per item: ${arbiter.getCostPerItem():.6f}')
+
+if __name__ == '__main__':
+    test()
