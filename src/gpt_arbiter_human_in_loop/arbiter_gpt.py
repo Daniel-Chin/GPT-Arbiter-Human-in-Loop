@@ -119,7 +119,10 @@ class ArbiterGPT(ArbiterInterface):
                 self.running_cost += PRICING[model].estimate(
                     chunk.usage, # empty except last
                 )
-                choice = chunk.choices[0]
+                try:
+                    choice = chunk.choices[0]
+                except IndexError:  # meta, e.g. last chunk with usage
+                    continue
                 callback(choice.delta.content or '')
         
         await asyncio.gather(*[
