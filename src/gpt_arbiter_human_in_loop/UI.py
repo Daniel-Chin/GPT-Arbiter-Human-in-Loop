@@ -452,6 +452,8 @@ class UI(App):
         onOff.focus()
     
     def myUpdate(self) -> None:
+        sModelName: Static = self.query_one('#model-name', Static)
+        sModelName.update(self.model_name)
         self.onYesNoChanged()
         switcherQuery: ContentSwitcher = self.query_one('#query-switcher', ContentSwitcher)
         switcherQuery.current = (
