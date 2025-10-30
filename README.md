@@ -35,3 +35,7 @@
 - Support more-than-2-way classification.
   - GUI. In binary classification, one hist represents decisions+confidence. In multi classification, one hist shows the confidence and one 100% stacked bar chart shows the decisions.
 - What if the model is confidently wrong? Set fixed prob of unconditioned sampling queries for human.
+
+## dev notes
+- Git branch "Downgrade-async-openai-to-plain-openai-for-cachier.-Revert-this-branch-once-cachier-supports-coroutines"
+  - https://github.com/python-cachier/cachier/issues/27
