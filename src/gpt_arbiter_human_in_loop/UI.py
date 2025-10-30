@@ -130,6 +130,8 @@ class UI(App):
         
         def score(item: tuple[str, ItemAnnotations]) -> float:
             _, anno_ = item
+            if anno_.human_label_no_or_yes is not None:
+                return -2.0
             k = anno_.status.staleness
             if k == 0:
                 return -1.0
@@ -142,9 +144,16 @@ class UI(App):
 
         visited.sort(key=score, reverse=True)
         random.shuffle(unvisited)
-        return unvisited + [
+        results = unvisited + [
             id_ for id_, _ in visited
         ]
+        # for index in (0, 1, 2, 3, -2, -1):
+        #     print(f'{index = }')
+        #     id_ = results[index]
+        #     print(f'{id_ = }')
+        #     anno = persistent.get(id_)
+        #     print(f'{anno = }')
+        return results
     
     def run(
         self, *, headless: bool = False, inline: bool = False, 
@@ -401,6 +410,7 @@ class UI(App):
                     status=ItemStatus.Classified(),
                     human_label_no_or_yes=annotations.human_label_no_or_yes,
                 ))
+                break
             if annotations.status != ItemStatus.Classified():
                 break
             self.cursor += 1
@@ -616,8 +626,8 @@ $ {estimated_total}
                 case _:
                     last_k = str(self.original_anno_of_last_arbit.status.staleness)
             last_p = self.original_anno_of_last_arbit.gpt_verdict
-            last_info = f'Last: k={last_k} p={last_p:.0%}'
-        cProgressBox.border_subtitle = last_info + ' ' + progress
+            last_info = f'Last: k={last_k} p={last_p:.0%}. '
+        cProgressBox.border_subtitle = last_info + progress
         # self.refresh(repaint=True)    # somehow mitigates the log interruption issue (#1) but makes the issue opaque
     
     def exit(self, result=None, return_code=None, message=None) -> None:
