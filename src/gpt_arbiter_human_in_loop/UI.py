@@ -130,6 +130,8 @@ class UI(App):
         def score(item: tuple[str, ItemAnnotations]) -> float:
             _, anno_ = item
             k = anno_.status.staleness
+            if k == 0:
+                return -1.0
             p = anno_.gpt_verdict
             assert p is not None
             H2 = -p * math.log2(p) - (1 - p) * math.log2(
@@ -137,7 +139,7 @@ class UI(App):
             ) if 0.0 < p < 1.0 else 0.0
             return H2 * (1 - (1 - 1 / Lambda) ** k)
 
-        visited.sort(key=score)
+        visited.sort(key=score, reverse=True)
         random.shuffle(unvisited)
         return unvisited + [
             id_ for id_, _ in visited
