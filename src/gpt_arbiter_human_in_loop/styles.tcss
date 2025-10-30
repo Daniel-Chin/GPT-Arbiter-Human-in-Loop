@@ -17,6 +17,10 @@ Screen {
     padding: 0 1;
 }
 
+.unimportant {
+    color: #999;
+}
+
 Horizontal {
     height: auto;
 }

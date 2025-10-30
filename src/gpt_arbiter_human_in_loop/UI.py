@@ -64,8 +64,8 @@ class UI(App):
         Lambda: float, 
         model_name: str = 'gpt-4o-mini',
         initial_throttle_qps: float = 1.0, # queries per second
-        interrogate_question: str = 'Explain briefly (1 - 3 sentences, usually 1 short sentence) why you made that decision.',
-        interrogate_max_tokens: int = 60,
+        interrogate_question: str = 'Explain VERY BRIEFLY (1 short sentence) why you made that decision.',
+        interrogate_max_tokens: int = 50,
     ) -> None:
         '''
         `Lambda`: data diversity hyperparam.  
@@ -194,8 +194,9 @@ class UI(App):
             with Container(id="query-section"):
                 yield Static("The GPT arbiter is entrusting you with the following decision!", id="greeter", classes='auto-width margin-h-1')
                 with Horizontal():
-                    yield Static('#4', id="query-index", classes='auto-width margin-h-1')
                     yield LinkPrivate("[url]", id="query-url", classes='auto-width margin-h-1')
+                    yield Static('Staleness:', classes='auto-width margin-h-1 unimportant')
+                    yield Static('69', id="staleness-display", classes='auto-width margin-h-1')
                 with TabbedContent(id="query-tabs", initial="tab-classifiee"):
                     with TabPane("Classifiee", id="tab-classifiee"):
                         with VerticalScroll(classes="query-text-scroller"):
@@ -517,8 +518,8 @@ class UI(App):
             url = 'youtu.be/' + self.querying_id
             sQueryURL.update(url)
             sQueryURL.url = 'https://' + url
-            classifiee = self.idToClassifiee(self.querying_id)
 
+            classifiee = self.idToClassifiee(self.querying_id)
             sQueryTextClassifiee: Static = self.query_one(
                 '#query-text-classifiee', Static, 
             )
@@ -541,6 +542,8 @@ class UI(App):
             )
 
             anno = self.persistent.get(self.querying_id)
+            sStaleDisplay: Static = self.query_one('#staleness-display', Static)
+            sStaleDisplay.update(str(anno.status.staleness))
             assert anno.gpt_verdict is not None
             sNo:  Static = self.query_one('#gpt-no-response',  Static)
             sYes: Static = self.query_one('#gpt-yes-response', Static)
@@ -601,9 +604,6 @@ $ {estimated_total}
         opening = '' if is_even else '[#000 on #ddd]'
         closing = '' if is_even else '[/]'
         cProgressBox.border_subtitle = f'{opening} {classified} {closing}/ {total}'
-        sQueryIndex: Static = self.query_one('#query-index', Static)
-        if self.querying_id is not None:
-            sQueryIndex.update(f'#{self.all_ids.index(self.querying_id)}')
         # self.refresh(repaint=True)    # somehow mitigates the log interruption issue (#1) but makes the issue opaque
     
     def exit(self, result=None, return_code=None, message=None) -> None:
