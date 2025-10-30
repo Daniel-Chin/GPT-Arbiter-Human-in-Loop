@@ -1,4 +1,5 @@
 # GPT Arbiter Human-in-Loop
+![A screenshot depicts various components of the app.](./screenshot.png)
 - Classify items according to your prompt and examples.  
   - e.g. [Which papers in this database are relevant to...?](https://github.com/Daniel-Chin/GPT-lit-reviewer)  
   - e.g. [Which YouTube videos in this metadatabase look like music?](https://github.com/Daniel-Chin/sync-my-youtube-playlists)  
