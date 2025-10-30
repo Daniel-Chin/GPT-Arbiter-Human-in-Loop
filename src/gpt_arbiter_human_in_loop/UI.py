@@ -554,9 +554,9 @@ $ {estimated_total}
         opening = '' if is_even else '[#000 on #ddd]'
         closing = '' if is_even else '[/]'
         cProgressBox.border_subtitle = f'{opening} {classified} {closing}/ {total}'
-        sQueryId: Static = self.query_one('#query-index', Static)
+        sQueryIndex: Static = self.query_one('#query-index', Static)
         if self.querying_id is not None:
-            sQueryId.update(f'#{self.all_ids.index(self.querying_id)}')
+            sQueryIndex.update(f'#{self.all_ids.index(self.querying_id)}')
         # self.refresh(repaint=True)    # somehow mitigates the log interruption issue (#1) but makes the issue opaque
     
     def exit(self, result=None, return_code=None, message=None) -> None:
