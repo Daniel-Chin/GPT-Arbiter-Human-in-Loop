@@ -136,12 +136,12 @@ class UI(App):
                         yield Button("Engage", id="throttle-toggle-btn")
                 with Horizontal(id="row-1"):
                     yield titled(Static("$ 0.01", id="cost-display"), 'Cost', skip_bottom=False)
-                    with titled(RadioSet(id='on-off'), 'GPT', skip_bottom=False):
+                    with titled(RadioSet(id='on-off'), 'GPT ⏻', skip_bottom=False):
                         yield RadioButton("Pause", id="off-radio", value=True)
                         yield RadioButton("Judge", id="on-radio")
                     yield titled(Histogram(
                         ('No', 'Yes'), id="decisions-histogram",
-                    ), 'Decisions and Confidence', skip_bottom=False)
+                    ), 'GPT Decisions and Confidence', skip_bottom=False)
             with titled(Container(id='progress-box'), 'Progress', skip_bottom=False):
                 yield StackedBar('-0123456789', id='stacked-bar')
         
@@ -511,7 +511,7 @@ class UI(App):
             f'{len(estimated_total)}.2f',
         )
         sCost.update(f'''
-$ {running}
+[u]$ {running}[/u]
 $ {estimated_total}
 '''.strip(), layout=True)
         stackedBar: StackedBar = self.query_one('#stacked-bar', StackedBar)
